@@ -24,7 +24,14 @@ static EM_BOOL on_web_display_size_changed(int event_type,
     engine->resize_window(ui_event->windowInnerWidth, ui_event->windowInnerHeight);
     return true;
 }
-
+// Binding code
+EMSCRIPTEN_BINDINGS(_Class_) {
+    emscripten::class_<SampleEngine>("Engine")
+        .constructor<>()
+        .class_function("setEnvironment", &SampleEngine::set_skybox_texture)
+        .class_function("loadGLB", &SampleEngine::load_glb)
+        .class_function("toggleSceneRotation", &SampleEngine::toggle_rotation);
+}
 #endif
 
 void closeWindow(GLFWwindow* window)

@@ -3,6 +3,7 @@
 #include "framework/entities/entity_text.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
+#include "framework/scene/parse_gltf.h"
 #include "graphics/sample_renderer.h"
 
 #include "backends/imgui_impl_glfw.h"
@@ -15,6 +16,7 @@
 EntityMesh* SampleEngine::skybox = nullptr;
 EntityMesh* SampleEngine::grid = nullptr;
 std::vector<Entity*> SampleEngine::entities;
+bool SampleEngine::rotate_scene = false;
 
 int SampleEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -65,13 +67,18 @@ void SampleEngine::update(float delta_time)
 {
     Engine::update(delta_time);
 
+    if (rotate_scene)
+        for (auto e : entities) e->rotate(delta_time, normals::pY);
+
     SampleRenderer* renderer = static_cast<SampleRenderer*>(SampleRenderer::instance);
     skybox->set_translation(renderer->get_camera_eye());
 }
 
 void SampleEngine::render()
 {
+#ifndef __EMSCRIPTEN__
     render_gui();
+#endif
 
     skybox->render();
 
@@ -200,4 +207,22 @@ bool SampleEngine::show_tree_recursive(Entity* entity)
     }
 
     return false;
+}
+
+void SampleEngine::set_skybox_texture(const std::string& filename)
+{
+    Texture* tex = RendererStorage::get_texture(filename);
+    skybox->set_surface_material_diffuse(0, tex);
+}
+
+void SampleEngine::load_glb(const std::string& filename)
+{
+    // TODO: We should destroy entities...
+    entities.clear();
+    parse_gltf(filename.c_str(), entities);
+}
+
+void SampleEngine::toggle_rotation()
+{
+    rotate_scene = !rotate_scene;
 }
