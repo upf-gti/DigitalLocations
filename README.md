@@ -1,6 +1,6 @@
-# wgpuEngineSample
+# DemoFABW-GTI
 
-This repository is a sample project using [wgpuEngine](https://github.com/upf-gti/wgpuEngine), the engine used in [Rooms](https://github.com/upf-gti/rooms).
+Demo of the collaboration between the UPF-GTI and FABW for the MAX-R project, using [wgpuEngine](https://github.com/upf-gti/wgpuEngine), the engine used in [Rooms](https://github.com/upf-gti/rooms).
 
 ## How to build
 
@@ -42,4 +42,4 @@ After building for web, you can host a local server with python:
 python -m http.server
 ```
 
-And access the webpage using a browser with WebGPU support using the link: ``localhost:8000/sample_project.html``
+And access the webpage using a browser with WebGPU support using the link: ``localhost:8000/gti_fabw_demo.html``
