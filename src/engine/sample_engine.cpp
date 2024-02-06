@@ -16,11 +16,16 @@
 
 EntityMesh* SampleEngine::skybox = nullptr;
 EntityMesh* SampleEngine::grid = nullptr;
+
 std::vector<Entity*> SampleEngine::entities;
 std::vector<EntityCamera*> SampleEngine::cameras;
+
 bool SampleEngine::rotate_scene = false;
 int SampleEngine::target_camera_idx = -1;
 std::string SampleEngine::last_camera_target_name = "Current";
+
+LerpedValue<glm::vec3> SampleEngine::eye_lerp;
+LerpedValue<glm::vec3> SampleEngine::center_lerp;
 
 int SampleEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -57,7 +62,7 @@ int SampleEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_gl
     cube->scale(glm::vec3(0.1f));
     entities.push_back(cube);
 
-    load_glb("data/scenes/Cameras.gltf");
+    // load_glb("data/scenes/Cameras.gltf");
 
 	return error;
 }
@@ -71,8 +76,6 @@ void SampleEngine::clean()
 
 void SampleEngine::update(float delta_time)
 {
-    Engine::update(delta_time);
-
     if (rotate_scene)
         for (auto e : entities) e->rotate(delta_time, normals::pY);
 
@@ -81,18 +84,30 @@ void SampleEngine::update(float delta_time)
 
     // Interpolate current camera position
     if (target_camera_idx == -1)
-        return;
-
-    Camera* camera = renderer->get_camera();
-
-    glm::vec3 new_eye = cameras[target_camera_idx]->get_translation();
-    eye_lerp.value = smooth_damp(eye_lerp.value, new_eye, &eye_lerp.velocity, 0.05f, 10.0f, delta_time);
-
-    camera->look_at(eye_lerp.value, camera->get_center(), camera->get_up());
-
-    if (glm::distance(eye_lerp.value, new_eye) < FLT_EPSILON)
     {
-        target_camera_idx = -1;
+        Engine::update(delta_time);
+    }
+    else
+    {
+        Camera* camera = renderer->get_camera();
+
+        // Lerp eye
+        glm::vec3 new_eye = cameras[target_camera_idx]->get_translation();
+        eye_lerp.value = smooth_damp(eye_lerp.value, new_eye, &eye_lerp.velocity, 0.50f, 20.0f, delta_time);
+
+        // Lerp center
+        glm::vec3 front = normalize(camera->get_center() - camera->get_eye());
+        glm::quat rot = glm::rotation(front, get_front(cameras[target_camera_idx]->get_model()));
+        front = glm::rotate(rot, front);
+        glm::vec3 new_center = new_eye + front;
+        center_lerp.value = smooth_damp(center_lerp.value, new_center, &center_lerp.velocity, 0.50f, 20.0f, delta_time);
+
+        camera->look_at(eye_lerp.value, center_lerp.value, camera->get_up());
+
+        if (glm::distance(eye_lerp.value, new_eye) < 0.01f && glm::distance(center_lerp.value, new_center) < 0.01f)
+        {
+            target_camera_idx = -1;
+        }
     }
 }
 
@@ -140,7 +155,7 @@ void SampleEngine::render_gui()
                 );
 
                 if (open_file_name) {
-                    parse_scene(open_file_name, entities);
+                    load_glb(open_file_name);
                 }
             }
             ImGui::EndMenu();
@@ -184,8 +199,7 @@ void SampleEngine::render_gui()
                 {
                     static bool sel = true;
                     if(ImGui::Selectable(cameras[i]->get_name().c_str(), &sel)) {
-                        target_camera_idx = i;
-                        last_camera_target_name = cameras[i]->get_name();
+                        set_camera_lookat_index(i);
                     }
                 }
                 ImGui::EndCombo();
@@ -294,6 +308,12 @@ void SampleEngine::set_camera_lookat_index(int index)
 
     target_camera_idx = index;
     last_camera_target_name = cameras[index]->get_name();
+
+    SampleRenderer* renderer = static_cast<SampleRenderer*>(SampleRenderer::instance);
+    Camera* camera = renderer->get_camera();
+
+    eye_lerp.value = camera->get_eye();
+    center_lerp.value = camera->get_center();
 }
 
 std::vector<std::string> SampleEngine::get_cameras_names()

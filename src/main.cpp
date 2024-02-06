@@ -32,6 +32,7 @@ EMSCRIPTEN_BINDINGS(_Class_) {
         .class_function("loadGLB", &SampleEngine::load_glb)
         .class_function("setCameraType", &SampleEngine::set_camera_type)
         .class_function("getCameraNames", &SampleEngine::get_cameras_names)
+        .class_function("setCameraLookAtIndex", &SampleEngine::set_camera_lookat_index)
         .class_function("toggleSceneRotation", &SampleEngine::toggle_rotation);
 
     emscripten::register_vector<std::string>("vector<string>");

@@ -15,7 +15,8 @@ class SampleEngine : public Engine {
 
     static int target_camera_idx;
     static std::string last_camera_target_name;
-    LerpedValue<glm::vec3> eye_lerp;
+    static LerpedValue<glm::vec3> eye_lerp;
+    static LerpedValue<glm::vec3> center_lerp;
 
     static std::vector<Entity*> entities;
     static std::vector<EntityCamera*> cameras;

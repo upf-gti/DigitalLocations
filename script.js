@@ -2,14 +2,12 @@ import { LX } from 'lexgui';
 
 async function _processVector( vector )
 {
-    if(vector.constructor == Promise)
+    if( vector.constructor == Promise )
         vector = await vector.then( value => { return value; } );
 
     var array = [];
     for( var i = 0; i < vector.size(); ++i )
-    {
         array.push( vector.get(i) );
-    }
 
     return array;
 }
@@ -20,18 +18,12 @@ const App = window.App = {
 
     init() {
 
-        this.cameras = [];
         this.cameraTypes = [ "Flyover", "Orbit" ];
+        this.cameraNames = [ ];
 
-        setTimeout( async () => {
-
-            var cameraNamesVector = Module.Engine.getCameraNames();
-
-            this.cameraNames = await _processVector( cameraNamesVector );
-
+        this._updateCameraNames( () => {
             this.initUI();
-
-        }, 200 );
+        } );
     },
 
     initUI() {
@@ -57,6 +49,8 @@ const App = window.App = {
 
         new LX.PocketDialog( "Control Panel", p => {
 
+            this.panel = p;
+
             p.branch( "Digital Location", { closed: true } );
             p.addText( "Name", "", null, { signal: "@location_name", disabled: true } );
             p.addFile( "Load", (data, file) => this.loadGltf(data, file), { type: 'buffer', local: false } );
@@ -68,7 +62,7 @@ const App = window.App = {
         
             p.branch( "Camera", { closed: true } );
             p.addDropdown( "Type", this.cameraTypes, "Flyover", (value) => this.setCameraType( value ) );
-            p.addList( "Look at", this.cameraNames, "PEPE" );
+            p.addList( "Look at", this.cameraNames, "", (value) => this.lookAtCameraIndexFromName( value ) );
         
         }, { size: [300, null], float: "right", draggable: false });
 
@@ -81,6 +75,15 @@ const App = window.App = {
         const index = this.cameraTypes.indexOf( type );
 
         Module.Engine.setCameraType( index );
+    },
+
+    lookAtCameraIndexFromName( name ) {
+
+        console.log( "Look at " + name );
+
+        const index = this.cameraNames.indexOf( name );
+
+        Module.Engine.setCameraLookAtIndex( index );
     },
 
     loadEnvironment( data, file ) {
@@ -107,6 +110,20 @@ const App = window.App = {
         }
         
         this._loadGltf( file.name, data );
+    },
+
+    _updateCameraNames( callback ) {
+
+        setTimeout( async () => {
+
+            var cameraNamesVector = Module.Engine.getCameraNames();
+
+            this.cameraNames = await _processVector( cameraNamesVector );
+
+            if( callback )
+                callback();
+
+        }, 300 );
     },
 
     _loadEnvironment( name, buffer ) {
@@ -136,6 +153,12 @@ const App = window.App = {
 
         // Update UI
         LX.emit( '@location_name', name.replace( '.glb', '' ) );
+
+        // Update Camera look at points
+
+        this._updateCameraNames( () => {
+            this.panel.get( "Look at" ).updateValues( this.cameraNames );
+        } );
     },
 
     _fileStore( filename, buffer ) {
