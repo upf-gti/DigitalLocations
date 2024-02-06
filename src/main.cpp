@@ -30,6 +30,7 @@ EMSCRIPTEN_BINDINGS(_Class_) {
         .constructor<>()
         .class_function("setEnvironment", &SampleEngine::set_skybox_texture)
         .class_function("loadGLB", &SampleEngine::load_glb)
+        .class_function("setCameraType", &SampleEngine::set_camera_type)
         .class_function("toggleSceneRotation", &SampleEngine::toggle_rotation);
 }
 #endif

@@ -31,12 +31,19 @@ int SampleRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     }
 #endif
 
-    camera = new FlyoverCamera();
+    orbit_camera = new OrbitCamera();
+    orbit_camera->set_perspective(glm::radians(45.0f), webgpu_context.render_width / static_cast<float>(webgpu_context.render_height), z_near, z_far);
+    orbit_camera->look_at(glm::vec3(0.0f, 0.1f, 0.4f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    orbit_camera->set_mouse_sensitivity(0.004f);
+    orbit_camera->set_speed(0.75f);
 
-    camera->set_perspective(glm::radians(45.0f), webgpu_context.render_width / static_cast<float>(webgpu_context.render_height), z_near, z_far);
-    camera->look_at(glm::vec3(0.0f, 0.1f, 0.4f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    camera->set_mouse_sensitivity(0.004f);
-    camera->set_speed(0.75f);
+    flyover_camera = new FlyoverCamera();
+    flyover_camera->set_perspective(glm::radians(45.0f), webgpu_context.render_width / static_cast<float>(webgpu_context.render_height), z_near, z_far);
+    flyover_camera->look_at(glm::vec3(0.0f, 0.1f, 0.4f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    flyover_camera->set_mouse_sensitivity(0.004f);
+    flyover_camera->set_speed(0.75f);
+
+    camera = flyover_camera;
 
     return 0;
 }
@@ -481,6 +488,18 @@ void SampleRenderer::resize_window(int width, int height)
     Renderer::resize_window(width, height);
 
     init_depth_buffers();
+}
+
+void SampleRenderer::set_camera_type(int camera_type)
+{
+    if (camera_type == CAMERA_FLYOVER) {
+        spdlog::error("CAMERA_FLYOVER");
+        camera = flyover_camera;
+    }
+    else if (camera_type == CAMERA_ORBIT) {
+        spdlog::error("CAMERA_ORBIT");
+        camera = orbit_camera;
+    }
 }
 
 glm::vec3 SampleRenderer::get_camera_eye()

@@ -148,6 +148,15 @@ void SampleEngine::render_gui()
             }
             ImGui::EndTabItem();
         }
+        if (ImGui::BeginTabItem("Camera"))
+        {
+            static int camera_type = 0;
+            if (ImGui::Combo("Camera Type", &camera_type, "FLYOVER\0ORBIT"))
+            {
+                set_camera_type(camera_type);
+            }
+            ImGui::EndTabItem();
+        }
         ImGui::EndTabBar();
     }
     ImGui::Separator();
@@ -225,4 +234,10 @@ void SampleEngine::load_glb(const std::string& filename)
 void SampleEngine::toggle_rotation()
 {
     rotate_scene = !rotate_scene;
+}
+
+void SampleEngine::set_camera_type(int camera_type)
+{
+    SampleRenderer* renderer = static_cast<SampleRenderer*>(SampleRenderer::instance);
+    renderer->set_camera_type(camera_type);
 }

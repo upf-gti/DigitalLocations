@@ -28,4 +28,5 @@ public:
     static void set_skybox_texture(const std::string& filename);
     static void load_glb(const std::string& filename);
     static void toggle_rotation();
+    static void set_camera_type(int camera_type);
 };

@@ -9,10 +9,18 @@
 #include "framework/camera/flyover_camera.h"
 #include "framework/camera/orbit_camera.h"
 
+enum {
+    CAMERA_FLYOVER,
+    CAMERA_ORBIT
+};
+
 class SampleRenderer : public Renderer {
 
     Surface             quad_surface;
     Uniform             camera_uniform;
+
+    Camera* orbit_camera = nullptr;
+    Camera* flyover_camera = nullptr;
 
     struct sCameraData {
         glm::mat4x4 mvp;
@@ -66,4 +74,6 @@ public:
     void clean() override;
 
     glm::vec3 get_camera_eye();
+
+    void set_camera_type(int camera_type);
 };
