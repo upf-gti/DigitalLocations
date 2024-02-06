@@ -6,9 +6,9 @@ const Rooms = window.Rooms = {
 
     init() {
 
-        this.initUI();
+        this.cameraTypes = [ "Flyover", "Orbit" ];
 
-        // this.engine = Module.Engine;
+        this.initUI();
     },
 
     initUI() {
@@ -44,10 +44,19 @@ const Rooms = window.Rooms = {
             p.addFile( "Load", (data, file) => this.loadEnvironment(data, file), { type: 'buffer', local: false } );
         
             p.branch( "Camera", { closed: true } );
-            p.addDropdown( "Type", [ "Flyover", "Orbit" ], "Orbit" );
+            p.addDropdown( "Type", this.cameraTypes, "Flyover", (value) => this.setCameraType( value ) );
         
         }, { size: [300, null], float: "right", draggable: false });
 
+    },
+
+    setCameraType( type ) {
+
+        console.log( "Setting " + type + " Camera" );
+
+        const index = this.cameraTypes.indexOf( type );
+
+        Module.Engine.setCameraType( index );
     },
 
     loadEnvironment( data, file ) {

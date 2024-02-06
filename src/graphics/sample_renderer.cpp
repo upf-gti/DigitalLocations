@@ -493,11 +493,9 @@ void SampleRenderer::resize_window(int width, int height)
 void SampleRenderer::set_camera_type(int camera_type)
 {
     if (camera_type == CAMERA_FLYOVER) {
-        spdlog::error("CAMERA_FLYOVER");
         camera = flyover_camera;
     }
     else if (camera_type == CAMERA_ORBIT) {
-        spdlog::error("CAMERA_ORBIT");
         camera = orbit_camera;
     }
 }
