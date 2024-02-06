@@ -1,14 +1,37 @@
 import { LX } from 'lexgui';
 
-const Rooms = window.Rooms = {
+async function _processVector( vector )
+{
+    if(vector.constructor == Promise)
+        vector = await vector.then( value => { return value; } );
+
+    var array = [];
+    for( var i = 0; i < vector.size(); ++i )
+    {
+        array.push( vector.get(i) );
+    }
+
+    return array;
+}
+
+const App = window.App = {
 
     dragSupportedExtensions: [ 'hdre', 'glb' ],
 
     init() {
 
+        this.cameras = [];
         this.cameraTypes = [ "Flyover", "Orbit" ];
 
-        this.initUI();
+        setTimeout( async () => {
+
+            var cameraNamesVector = Module.Engine.getCameraNames();
+
+            this.cameraNames = await _processVector( cameraNamesVector );
+
+            this.initUI();
+
+        }, 200 );
     },
 
     initUI() {
@@ -39,12 +62,13 @@ const Rooms = window.Rooms = {
             p.addFile( "Load", (data, file) => this.loadGltf(data, file), { type: 'buffer', local: false } );
             p.addCheckbox( "Rotate", false, () => Module.Engine.toggleSceneRotation() );
         
-            p.branch( "Environment", { closed: true } );
-            p.addText( "Name", "", null, { signal: "@environment_name", disabled: true } );
-            p.addFile( "Load", (data, file) => this.loadEnvironment(data, file), { type: 'buffer', local: false } );
+            // p.branch( "Environment", { closed: true } );
+            // p.addText( "Name", "", null, { signal: "@environment_name", disabled: true } );
+            // p.addFile( "Load", (data, file) => this.loadEnvironment(data, file), { type: 'buffer', local: false } );
         
             p.branch( "Camera", { closed: true } );
             p.addDropdown( "Type", this.cameraTypes, "Flyover", (value) => this.setCameraType( value ) );
+            p.addList( "Look at", this.cameraNames, "PEPE" );
         
         }, { size: [300, null], float: "right", draggable: false });
 
@@ -124,4 +148,4 @@ const Rooms = window.Rooms = {
 
 };
 
-Rooms.init();
+App.init();

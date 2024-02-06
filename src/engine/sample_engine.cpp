@@ -1,6 +1,7 @@
 #include "sample_engine.h"
 #include "framework/entities/entity_mesh.h"
 #include "framework/entities/entity_text.h"
+#include "framework/entities/entity_camera.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
@@ -16,7 +17,10 @@
 EntityMesh* SampleEngine::skybox = nullptr;
 EntityMesh* SampleEngine::grid = nullptr;
 std::vector<Entity*> SampleEngine::entities;
+std::vector<EntityCamera*> SampleEngine::cameras;
 bool SampleEngine::rotate_scene = false;
+int SampleEngine::target_camera_idx = -1;
+std::string SampleEngine::last_camera_target_name = "Current";
 
 int SampleEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
 {
@@ -53,6 +57,8 @@ int SampleEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_gl
     cube->scale(glm::vec3(0.1f));
     entities.push_back(cube);
 
+    load_glb("data/scenes/Cameras.gltf");
+
 	return error;
 }
 
@@ -72,6 +78,22 @@ void SampleEngine::update(float delta_time)
 
     SampleRenderer* renderer = static_cast<SampleRenderer*>(SampleRenderer::instance);
     skybox->set_translation(renderer->get_camera_eye());
+
+    // Interpolate current camera position
+    if (target_camera_idx == -1)
+        return;
+
+    Camera* camera = renderer->get_camera();
+
+    glm::vec3 new_eye = cameras[target_camera_idx]->get_translation();
+    eye_lerp.value = smooth_damp(eye_lerp.value, new_eye, &eye_lerp.velocity, 0.05f, 10.0f, delta_time);
+
+    camera->look_at(eye_lerp.value, camera->get_center(), camera->get_up());
+
+    if (glm::distance(eye_lerp.value, new_eye) < FLT_EPSILON)
+    {
+        target_camera_idx = -1;
+    }
 }
 
 void SampleEngine::render()
@@ -155,6 +177,19 @@ void SampleEngine::render_gui()
             {
                 set_camera_type(camera_type);
             }
+
+            if (ImGui::BeginCombo("Look at", last_camera_target_name.c_str()))
+            {
+                for (int i = 0; i < cameras.size(); ++i)
+                {
+                    static bool sel = true;
+                    if(ImGui::Selectable(cameras[i]->get_name().c_str(), &sel)) {
+                        target_camera_idx = i;
+                        last_camera_target_name = cameras[i]->get_name();
+                    }
+                }
+                ImGui::EndCombo();
+            }
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
@@ -228,7 +263,17 @@ void SampleEngine::load_glb(const std::string& filename)
 {
     // TODO: We should destroy entities...
     entities.clear();
-    parse_gltf(filename.c_str(), entities);
+    parse_scene(filename.c_str(), entities);
+
+    // Each time we load entities, get the cameras!
+    cameras.clear();
+    for (auto entity : entities)
+    {
+        EntityCamera* new_camera = dynamic_cast<EntityCamera*>(entity);
+        if (new_camera) {
+            cameras.push_back(new_camera);
+        }
+    }
 }
 
 void SampleEngine::toggle_rotation()
@@ -240,4 +285,25 @@ void SampleEngine::set_camera_type(int camera_type)
 {
     SampleRenderer* renderer = static_cast<SampleRenderer*>(SampleRenderer::instance);
     renderer->set_camera_type(camera_type);
+}
+
+void SampleEngine::set_camera_lookat_index(int index)
+{
+    if (index < 0 || index >= cameras.size())
+        return;
+
+    target_camera_idx = index;
+    last_camera_target_name = cameras[index]->get_name();
+}
+
+std::vector<std::string> SampleEngine::get_cameras_names()
+{
+    std::vector<std::string> names;
+
+    for (auto camera : cameras)
+    {
+        names.push_back(camera->get_name());
+    }
+
+    return names;
 }
