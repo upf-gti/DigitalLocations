@@ -10,6 +10,7 @@
 class Entity;
 class EntityMesh;
 class EntityCamera;
+class EntityEnvironment;
 
 class SampleEngine : public Engine {
 
@@ -20,8 +21,7 @@ class SampleEngine : public Engine {
 
     static std::vector<Entity*> entities;
     static std::vector<EntityCamera*> cameras;
-    static EntityMesh* skybox;
-    static EntityMesh* grid;
+    static EntityEnvironment* skybox;
     static bool rotate_scene;
 
     void render_gui();

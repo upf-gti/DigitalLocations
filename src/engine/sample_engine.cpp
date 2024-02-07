@@ -2,6 +2,7 @@
 #include "framework/entities/entity_mesh.h"
 #include "framework/entities/entity_text.h"
 #include "framework/entities/entity_camera.h"
+#include "framework/entities/entity_environment.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
@@ -14,8 +15,7 @@
 
 #include "spdlog/spdlog.h"
 
-EntityMesh* SampleEngine::skybox = nullptr;
-EntityMesh* SampleEngine::grid = nullptr;
+EntityEnvironment* SampleEngine::skybox = nullptr;
 
 std::vector<Entity*> SampleEngine::entities;
 std::vector<EntityCamera*> SampleEngine::cameras;
@@ -31,38 +31,16 @@ int SampleEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_gl
 {
 	int error = Engine::initialize(renderer, window, use_glfw, use_mirror_screen);
 
-    std::string environment = "data/textures/environments/sky.hdre";
-
     // Create skybox
 
-    {
-        skybox = parse_mesh("data/meshes/cube.obj");
-        skybox->set_surface_material_shader(0, RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"));
-        skybox->set_surface_material_diffuse(0, Renderer::instance->get_irradiance_texture());
-        skybox->scale(glm::vec3(100.f));
-        skybox->set_surface_material_priority(0, 2);
-    }
-
-    // Create grid
-    {
-        grid = new EntityMesh();
-        grid->add_surface(RendererStorage::get_surface("quad"));
-        grid->set_translation(glm::vec3(0.0f));
-        grid->rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        grid->scale(glm::vec3(3.f));
-
-        Material grid_material;
-        grid_material.shader = RendererStorage::get_shader("data/shaders/mesh_grid.wgsl");
-        grid_material.flags |= MATERIAL_TRANSPARENT;
-
-        grid->set_surface_material_override(grid->get_surface(0), grid_material);
-    }
+    skybox = new EntityEnvironment();
+    entities.push_back(skybox);
 
     EntityMesh* cube = parse_mesh("data/meshes/cube/cube.obj");
     cube->scale(glm::vec3(0.1f));
     entities.push_back(cube);
 
-    // load_glb("data/scenes/Cameras.gltf");
+    // load_glb("data/scenes/Test.gltf");
 
 	return error;
 }
@@ -70,8 +48,6 @@ int SampleEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_gl
 void SampleEngine::clean()
 {
     Engine::clean();
-
-    if (grid) delete grid;
 }
 
 void SampleEngine::update(float delta_time)
@@ -79,8 +55,9 @@ void SampleEngine::update(float delta_time)
     if (rotate_scene)
         for (auto e : entities) e->rotate(delta_time, normals::pY);
 
-    SampleRenderer* renderer = static_cast<SampleRenderer*>(SampleRenderer::instance);
-    skybox->set_translation(renderer->get_camera_eye());
+    for (auto entity : entities) {
+        entity->update(delta_time);
+    }
 
     // Interpolate current camera position
     if (target_camera_idx == -1)
@@ -117,13 +94,9 @@ void SampleEngine::render()
     render_gui();
 #endif
 
-    skybox->render();
-
 	for (auto entity : entities) {
 		entity->render();
 	}
-
-    grid->render();
 
 	Engine::render();
 }
@@ -269,14 +242,16 @@ bool SampleEngine::show_tree_recursive(Entity* entity)
 
 void SampleEngine::set_skybox_texture(const std::string& filename)
 {
-    Texture* tex = RendererStorage::get_texture(filename);
-    skybox->set_surface_material_diffuse(0, tex);
+    skybox->set_texture(filename);
 }
 
 void SampleEngine::load_glb(const std::string& filename)
 {
-    // TODO: We should destroy entities...
     entities.clear();
+
+    // Add skybox again..
+    entities.push_back(skybox);
+
     parse_scene(filename.c_str(), entities);
 
     // Each time we load entities, get the cameras!

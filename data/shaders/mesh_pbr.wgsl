@@ -130,7 +130,7 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     var final_color : vec3f = vec3f(0.0); 
     // final_color += get_direct_light(m, vec3f(1.0), 1.0);
 
-    final_color += tonemap_filmic(get_indirect_light(m), 1.0);
+    final_color += tonemap_filmic(get_indirect_light(m), 4.0);
 
     final_color += m.emissive;
 

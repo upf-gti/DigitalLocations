@@ -73,7 +73,5 @@ public:
     void render() override;
     void clean() override;
 
-    glm::vec3 get_camera_eye();
-
     void set_camera_type(int camera_type);
 };

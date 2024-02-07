@@ -473,7 +473,6 @@ void SampleRenderer::init_render_mesh_pipelines()
     Pipeline::register_render_pipeline(render_mesh_shader, color_target);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_texture.wgsl"), color_target);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_texture_cube.wgsl"), color_target, { .cull_mode = WGPUCullMode_Front, .uses_depth_write = false });
-    Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_grid.wgsl"), color_target);
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_transparent.wgsl"), color_target, { .cull_mode = WGPUCullMode_Back });
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/mesh_outline.wgsl"), color_target, { .cull_mode = WGPUCullMode_Front });
     Pipeline::register_render_pipeline(RendererStorage::get_shader("data/shaders/ui/ui_group.wgsl"), color_target);
@@ -498,15 +497,4 @@ void SampleRenderer::set_camera_type(int camera_type)
     else if (camera_type == CAMERA_ORBIT) {
         camera = orbit_camera;
     }
-}
-
-glm::vec3 SampleRenderer::get_camera_eye()
-{
-#if defined(XR_SUPPORT)
-    if (is_openxr_available) {
-        return xr_context.per_view_data[0].position; // return left eye
-    }
-#endif
-
-    return camera->get_eye();
 }
