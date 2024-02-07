@@ -40,7 +40,7 @@ const App = window.App = {
             if( this.dragSupportedExtensions.indexOf( ext ) == -1 )
                 return;
             switch( ext ) {
-                case 'hdr': this.parseEnvironment( null, file ); break;
+                case 'hdr':
                 case 'hdre': this.loadEnvironment( file ); break;
                 case 'glb': this.loadGltf( file ); break;
             }
@@ -67,12 +67,12 @@ const App = window.App = {
 
             p.branch( "Digital Location", { closed: true } );
             p.addText( "Name", "", null, { signal: "@location_name", disabled: true } );
-            p.addFile( "Load", (data, file) => this.loadGltf(data, file), { type: 'buffer', local: false } );
+            p.addFile( "Load", (data, file) => this.loadGltf( file, data ), { type: 'buffer', local: false } );
             p.addCheckbox( "Rotate", false, () => Module.Engine.toggleSceneRotation() );
         
             p.branch( "Environment", { closed: true } );
             p.addText( "Name", "", null, { signal: "@environment_name", disabled: true } );
-            p.addFile( "Load", (data, file) => this.loadEnvironment(data, file), { type: 'buffer', local: false } );
+            p.addFile( "Load", (data, file) => this.loadEnvironment( file, data ), { type: 'buffer', local: false } );
         
             p.branch( "Camera", { closed: true } );
             p.addDropdown( "Type", this.cameraTypes, "Flyover", (value) => this.setCameraType( value ) );
@@ -131,26 +131,32 @@ const App = window.App = {
         }, 50 );
     },
 
-    loadEnvironment( data, file ) {
+    loadEnvironment( file, data ) {
 
-        if( data.constructor === File )
+        if( LX.getExtension( file.name ) == 'hdr')
+        {
+            this.parseEnvironment( null, file );
+            return;
+        }
+
+        if( !data )
         {
             const reader = new FileReader();
-            reader.readAsArrayBuffer( data );
-            reader.onload = e => this._loadEnvironment( data.name, e.target.result );
+            reader.readAsArrayBuffer( file );
+            reader.onload = e => this._loadEnvironment( file.name, e.target.result );
             return;
         }
         
         this._loadEnvironment( file.name, data );
     },
 
-    loadGltf( data, file ) {
+    loadGltf( file, data ) {
 
-        if( data.constructor === File )
+        if( !data )
         {
             const reader = new FileReader();
-            reader.readAsArrayBuffer( data );
-            reader.onload = e => this._loadGltf( data.name, e.target.result );
+            reader.readAsArrayBuffer( file );
+            reader.onload = e => this._loadGltf( file.name, e.target.result );
             return;
         }
         
