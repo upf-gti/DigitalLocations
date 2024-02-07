@@ -14,7 +14,7 @@ async function _processVector( vector )
 
 const App = window.App = {
 
-    dragSupportedExtensions: [ 'hdre', 'glb' ],
+    dragSupportedExtensions: [ 'hdr', 'hdre', 'glb' ],
 
     init() {
 
@@ -42,6 +42,7 @@ const App = window.App = {
             if( this.dragSupportedExtensions.indexOf( ext ) == -1 )
                 return;
             switch( ext ) {
+                case 'hdr': this.parseEnvironment( null, file ); break;
                 case 'hdre': this.loadEnvironment( file ); break;
                 case 'glb': this.loadGltf( file ); break;
             }
@@ -56,9 +57,9 @@ const App = window.App = {
             p.addFile( "Load", (data, file) => this.loadGltf(data, file), { type: 'buffer', local: false } );
             p.addCheckbox( "Rotate", false, () => Module.Engine.toggleSceneRotation() );
         
-            // p.branch( "Environment", { closed: true } );
-            // p.addText( "Name", "", null, { signal: "@environment_name", disabled: true } );
-            // p.addFile( "Load", (data, file) => this.loadEnvironment(data, file), { type: 'buffer', local: false } );
+            p.branch( "Environment", { closed: true } );
+            p.addText( "Name", "", null, { signal: "@environment_name", disabled: true } );
+            p.addFile( "Load", (data, file) => this.loadEnvironment(data, file), { type: 'buffer', local: false } );
         
             p.branch( "Camera", { closed: true } );
             p.addDropdown( "Type", this.cameraTypes, "Flyover", (value) => this.setCameraType( value ) );
@@ -84,6 +85,30 @@ const App = window.App = {
         const index = this.cameraNames.indexOf( name );
 
         Module.Engine.setCameraLookAtIndex( index );
+    },
+
+    parseEnvironment( name, data ) {
+
+        if( data.constructor === File )
+        {
+            const reader = new FileReader();
+            reader.readAsArrayBuffer( data );
+            reader.onload = e => this.parseEnvironment( data.name, e.target.result );
+            return;
+        }
+
+        const params = {
+
+            data: data,
+            size: 256,
+            filename: name,
+            oncomplete: () => {
+                const buffer = HDRTool.getSkybox( name, {  channels: 4 } );
+                this._loadEnvironment( name.replace( ".hdr", ".hdre" ), buffer );
+            }
+        };
+
+        HDRTool.prefilter( name, params );
     },
 
     loadEnvironment( data, file ) {
@@ -129,8 +154,8 @@ const App = window.App = {
     _loadEnvironment( name, buffer ) {
 
         name = name.substring( name.lastIndexOf( '/' ) );
-        
-        console.log( "Loading hdre", [ name, buffer ] );
+
+        console.log( "Loading " + LX.getExtension( name ).toUpperCase(), [ name, buffer ] );
 
         this._fileStore( name, buffer );
 
@@ -138,7 +163,7 @@ const App = window.App = {
         Module.Engine.setEnvironment( name );
 
         // Update UI
-        LX.emit( '@environment_name', name.replace( '.hdre', '' ) );
+        LX.emit( '@environment_name', name.replace( /.hdre|.hdr/, "" ) );
     },
 
     _loadGltf( name, buffer ) {
