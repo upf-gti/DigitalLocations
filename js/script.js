@@ -1,10 +1,7 @@
 import { LX } from 'lexgui';
 
-async function _processVector( vector )
+function _processVector( vector )
 {
-    if( vector.constructor == Promise )
-        vector = await vector.then( value => { return value; } );
-
     var array = [];
     for( var i = 0; i < vector.size(); ++i )
         array.push( vector.get(i) );
@@ -21,9 +18,10 @@ const App = window.App = {
         this.cameraTypes = [ "Flyover", "Orbit" ];
         this.cameraNames = [ ];
 
-        this._updateCameraNames( () => {
+        Module.onRuntimeInitialized = () => {
+         
             this.initUI();
-        } );
+        }
     },
 
     initUI() {
@@ -47,6 +45,21 @@ const App = window.App = {
                 case 'glb': this.loadGltf( file ); break;
             }
         });
+
+        // Create loading  modal
+
+        this.modal = document.createElement( 'div' );
+
+        this.modal.style.width = "100%";
+        this.modal.style.height = "100%";
+        this.modal.style.opacity = "0.8";
+        this.modal.style.backgroundColor = "#000";
+        this.modal.style.position = "absolute";
+        this.modal.style.display = "none";
+
+        this.toggleModal = () => this.modal.style.display = (this.modal.style.display == "block" ? "none" : "block");
+
+        area.attach( this.modal );
 
         new LX.PocketDialog( "Control Panel", p => {
 
@@ -97,18 +110,25 @@ const App = window.App = {
             return;
         }
 
-        const params = {
+        this.toggleModal();
 
-            data: data,
-            size: 256,
-            filename: name,
-            oncomplete: () => {
-                const buffer = HDRTool.getSkybox( name, {  channels: 4 } );
-                this._loadEnvironment( name.replace( ".hdr", ".hdre" ), buffer );
-            }
-        };
+        setTimeout( () => {
 
-        HDRTool.prefilter( name, params );
+            const params = {
+
+                data: data,
+                size: 256,
+                filename: name,
+                oncomplete: () => {
+                    const buffer = HDRTool.getSkybox( name, {  channels: 4 } );
+                    this._loadEnvironment( name.replace( ".hdr", ".hdre" ), buffer );
+                    this.toggleModal();
+                }
+            };
+
+            HDRTool.prefilter( name, params );
+
+        }, 50 );
     },
 
     loadEnvironment( data, file ) {
@@ -137,18 +157,11 @@ const App = window.App = {
         this._loadGltf( file.name, data );
     },
 
-    _updateCameraNames( callback ) {
+    async _updateCameraNames() {
 
-        setTimeout( async () => {
-
-            var cameraNamesVector = Module.Engine.getCameraNames();
-
-            this.cameraNames = await _processVector( cameraNamesVector );
-
-            if( callback )
-                callback();
-
-        }, 300 );
+        var cameraNamesVector = await Module.Engine.getCameraNames();
+        
+        this.cameraNames = _processVector( cameraNamesVector );
     },
 
     _loadEnvironment( name, buffer ) {
@@ -166,7 +179,7 @@ const App = window.App = {
         LX.emit( '@environment_name', name.replace( /.hdre|.hdr/, "" ) );
     },
 
-    _loadGltf( name, buffer ) {
+    async _loadGltf( name, buffer ) {
 
         name = name.substring( name.lastIndexOf( '/' ) );
         
@@ -177,13 +190,14 @@ const App = window.App = {
         Module.Engine.loadGLB( name );
 
         // Update UI
+
         LX.emit( '@location_name', name.replace( '.glb', '' ) );
 
         // Update Camera look at points
 
-        this._updateCameraNames( () => {
-            this.panel.get( "Look at" ).updateValues( this.cameraNames );
-        } );
+        await this._updateCameraNames();
+
+        this.panel.get( "Look at" ).updateValues( this.cameraNames );
     },
 
     _fileStore( filename, buffer ) {
@@ -193,7 +207,6 @@ const App = window.App = {
         FS.write( stream, data, 0, data.length, 0 );
         FS.close( stream );
     }
-
 };
 
 App.init();
