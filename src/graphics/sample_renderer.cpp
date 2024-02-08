@@ -492,9 +492,11 @@ void SampleRenderer::resize_window(int width, int height)
 void SampleRenderer::set_camera_type(int camera_type)
 {
     if (camera_type == CAMERA_FLYOVER) {
+        flyover_camera->look_at(orbit_camera->get_eye(), orbit_camera->get_center(), orbit_camera->get_up());
         camera = flyover_camera;
     }
     else if (camera_type == CAMERA_ORBIT) {
+        orbit_camera->look_at(flyover_camera->get_eye(), flyover_camera->get_center(), flyover_camera->get_up());
         camera = orbit_camera;
     }
 }

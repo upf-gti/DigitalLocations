@@ -70,7 +70,7 @@ int main()
     required_limits.limits.minUniformBufferOffsetAlignment = 256;
     required_limits.limits.minStorageBufferOffsetAlignment = 256;
     required_limits.limits.maxStorageBuffersPerShaderStage = 8;
-    required_limits.limits.maxComputeInvocationsPerWorkgroup = 1024;
+    required_limits.limits.maxComputeInvocationsPerWorkgroup = 256;
     required_limits.limits.maxSamplersPerShaderStage = 1;
     required_limits.limits.maxDynamicUniformBuffersPerPipelineLayout = 1;
 
