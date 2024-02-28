@@ -19,7 +19,6 @@ const App = window.App = {
         this.cameraNames = [ ];
 
         this.urlParams = new URLSearchParams( window.location.search );
-        this.scenePath = "../data/scenes/";
 
         this.location = this.urlParams.get( 'location' );
         this.dev = this.urlParams.has( 'dev' ) ? JSON.parse( this.urlParams.get( 'dev' ) ) : false;
@@ -29,11 +28,11 @@ const App = window.App = {
 
         if( this.location )
         {
-            // const fullPath = this.scenePath + this.location;
-            // LX.requestBinary( fullPath, ( data ) => {
-            //     this.loadGltf( fullPath, data );
-            // } );
-            // Module.Engine.loadGLB( fullPath );
+            this.toggleModal( true );
+
+            setTimeout( () => {
+                this.loadGltf( this.location );
+            }, 150 );
         }
     },
 
@@ -48,6 +47,7 @@ const App = window.App = {
         canvas.addEventListener('dragleave', e => e.preventDefault() );
         canvas.addEventListener('drop', (e) => {
             e.preventDefault();
+            this.toggleModal( true );
             const file = e.dataTransfer.files[0];
             const ext = LX.getExtension( file.name );
             if( this.dragSupportedExtensions.indexOf( ext ) == -1 )
@@ -76,10 +76,8 @@ const App = window.App = {
         this.modal.style.opacity = "0.9";
         this.modal.style.backgroundColor = "#000";
         this.modal.style.position = "absolute";
-        this.modal.style.display = "none";
         this.modal.style.cursor = "wait";
-
-        this.toggleModal = () => this.modal.style.display = (this.modal.style.display == "block" ? "none" : "block");
+        this.modal.hidden = true;
 
         area.attach( this.modal );
 
@@ -87,16 +85,18 @@ const App = window.App = {
 
             this.panel = p;
 
+            const onBeforeRead = () => this.toggleModal( true );
+
             if( this.dev )
             {
                 p.branch( "Digital Location", { closed: true } );
                 p.addText( "Name", "", null, { signal: "@location_name", disabled: true } );
-                p.addFile( "Load", (data, file) => this.loadGltf( file, data ), { type: 'buffer', local: false } );
+                p.addFile( "Load", (data, file) => this.loadGltf( file, data ), { type: 'buffer', local: false, onBeforeRead: onBeforeRead } );
                 p.addCheckbox( "Rotate", false, () => Module.Engine.toggleSceneRotation() );
             
                 p.branch( "Environment", { closed: true } );
                 p.addText( "Name", "", null, { signal: "@environment_name", disabled: true } );
-                p.addFile( "Load", (data, file) => this.loadEnvironment( file, data ), { type: 'buffer', local: false } );
+                p.addFile( "Load", (data, file) => this.loadEnvironment( file, data ), { type: 'buffer', local: false, onBeforeRead: onBeforeRead } );
 
                 p.branch( "Camera", { closed: true } );
             }
@@ -115,6 +115,11 @@ const App = window.App = {
         {
             this.toggleUI();
         }
+    },
+
+    toggleModal( force ) {
+
+        this.modal.hidden = force !== undefined ? (!force) : !this.modal.hidden;
     },
 
     toggleUI( force ) {
@@ -155,8 +160,6 @@ const App = window.App = {
             return;
         }
 
-        this.toggleModal();
-
         setTimeout( () => {
 
             const params = {
@@ -167,13 +170,12 @@ const App = window.App = {
                 oncomplete: () => {
                     const buffer = HDRTool.getSkybox( name, {  channels: 4 } );
                     this._loadEnvironment( name.replace( ".hdr", ".hdre" ), buffer );
-                    this.toggleModal();
                 }
             };
 
             HDRTool.prefilter( name, params );
 
-        }, 50 );
+        }, 150 );
     },
 
     loadEnvironment( file, data ) {
@@ -199,6 +201,14 @@ const App = window.App = {
 
         if( !data )
         {
+            // file is the path URL
+            if( file.constructor == String )
+            {
+                const path = file;
+                LX.requestBinary( path, ( data ) => this._loadGltf( path, data ) );
+                return;
+            }
+
             const reader = new FileReader();
             reader.readAsArrayBuffer( file );
             reader.onload = e => this._loadGltf( file.name, e.target.result );
@@ -226,6 +236,8 @@ const App = window.App = {
         // This will load the hdre and set texture to the skybox
         Module.Engine.setEnvironment( name );
 
+        this.toggleModal( false );
+
         // Update UI
         LX.emit( '@environment_name', name.replace( /.hdre|.hdr/, "" ) );
     },
@@ -236,9 +248,13 @@ const App = window.App = {
         
         console.log( "Loading glb", [ name, buffer ] );
 
+        console.log(name, buffer);
+
         this._fileStore( name, buffer );
 
         Module.Engine.loadGLB( name );
+
+        this.toggleModal( false );
 
         // Update UI
 
