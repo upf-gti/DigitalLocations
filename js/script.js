@@ -22,7 +22,8 @@ const App = window.App = {
         this.scenePath = "../data/scenes/";
 
         this.location = this.urlParams.get( 'location' );
-        this.dev = this.urlParams.get( 'dev' ) ? JSON.parse( this.urlParams.get( 'dev' ) ) : false;
+        this.dev = this.urlParams.has( 'dev' ) ? JSON.parse( this.urlParams.get( 'dev' ) ) : false;
+        this.ui = this.urlParams.has( 'ui' ) ? JSON.parse( this.urlParams.get( 'ui' ) ) : true;
 
         this.initUI();
 
@@ -57,6 +58,14 @@ const App = window.App = {
                 case 'glb': this.loadGltf( file ); break;
             }
         });
+
+        canvas.addEventListener('keyup', e => {
+            if( e.key == 'c' )
+            {
+                e.preventDefault();
+                this.toggleUI();
+            }
+        } );
 
         // Create loading  modal
 
@@ -101,6 +110,11 @@ const App = window.App = {
             p.addButton( null, "Reset", () => this.resetCamera() );
         
         }, { size: [300, null], float: "right", draggable: false });
+
+        if( !this.ui )
+        {
+            this.toggleUI();
+        }
     },
 
     toggleUI( force ) {
