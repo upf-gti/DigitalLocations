@@ -40,7 +40,7 @@ int SampleEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_gl
     cube->scale(glm::vec3(0.1f));
     entities.push_back(cube);
 
-    // load_glb("data/scenes/Test.gltf");
+    // load_glb("data/scenes/Cameras.glb");
 
 	return error;
 }
@@ -161,6 +161,7 @@ void SampleEngine::render_gui()
         if (ImGui::BeginTabItem("Camera"))
         {
             static int camera_type = 0;
+
             if (ImGui::Combo("Camera Type", &camera_type, "FLYOVER\0ORBIT"))
             {
                 set_camera_type(camera_type);
@@ -177,6 +178,12 @@ void SampleEngine::render_gui()
                 }
                 ImGui::EndCombo();
             }
+
+            if (ImGui::Button("Reset Camera"))
+            {
+                reset_camera();
+            }
+
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
@@ -274,6 +281,22 @@ void SampleEngine::set_camera_type(int camera_type)
 {
     SampleRenderer* renderer = static_cast<SampleRenderer*>(SampleRenderer::instance);
     renderer->set_camera_type(camera_type);
+}
+
+void SampleEngine::reset_camera()
+{
+    SampleRenderer* renderer = static_cast<SampleRenderer*>(SampleRenderer::instance);
+    Camera* camera = renderer->get_camera();
+
+    for (auto entity : entities)
+    {
+        EntityCamera* is_camera = dynamic_cast<EntityCamera*>(entity);
+        // Get first non camera
+        if (!is_camera) {
+            camera->look_at_entity(entity);
+            break;
+        }
+    }
 }
 
 void SampleEngine::set_camera_lookat_index(int index)

@@ -41,5 +41,6 @@ public:
     static void toggle_rotation();
     static void set_camera_type(int camera_type);
     static void set_camera_lookat_index(int index);
+    static void reset_camera();
     static std::vector<std::string> get_cameras_names();
 };

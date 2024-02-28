@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en-us">
-  <head>
+<head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>WebGPU Engine</title>
@@ -12,48 +12,68 @@
           }
       }
     </script>
-  </head>
-  <body>
-    <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1 style="position:fixed;height:100%;width:100%;top:0%;left:0%;resize:both;"></canvas>
+</head>
+
+<body>
+    <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1
+        style="position:fixed;height:100%;width:100%;top:0%;left:0%;resize:both;"></canvas>
     <template id="main-script">
-      {{{ SCRIPT }}}
+        {{{ SCRIPT }}}
     </template>
     <script type='text/javascript'>
 
-      var Module = {
-        preRun: [],
-        postRun: [],
-        canvas: (function() {
-          var canvas = document.getElementById('canvas');
+        var Module = {
+            preRun: [],
+            postRun: [],
+            onRuntimeInitialized: () => {
+                var script = document.createElement( 'script' );
+                script.type = 'module';
+                script.src = "../js/script.js";
+                script.async = false;
+                document.getElementsByTagName( 'head' )[ 0 ].appendChild( script );
+            },
+            canvas: (function () {
+                var canvas = document.getElementById('canvas');
 
-          // Event handler to resize the canvas when the document view is changed
-          window.addEventListener('resize', () => {
-            canvas.clientWidth = window.innerWidth;
-            canvas.clientHeight = window.innerHeight;
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-          }, false);
+                // Event handler to resize the canvas when the document view is changed
+                window.addEventListener('resize', () => {
+                    canvas.clientWidth = window.innerWidth;
+                    canvas.clientHeight = window.innerHeight;
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                }, false);
 
-          return canvas;
-        })(),
-        totalDependencies: 0
-      };
+                return canvas;
+            })(),
+            totalDependencies: 0
+        };
 
-      (async () => {
-        // Custom for WebGPU
-        if (!navigator.gpu) {
-          console.error("Sorry, WebGPU is not suported by your browser.");
-          return;
-        } else {
-          const jsTemplate = document.getElementById("main-script");
-          const js = jsTemplate.content.cloneNode(true);
-          document.body.appendChild(js);
-        }
-      })();
+        (async () => {
+            // Custom for WebGPU
+            if (!navigator.gpu) {
+                console.error("Sorry, WebGPU is not supported by your browser.");
+                const msg = document.createElement("div");
+                Object.assign( msg.style, {
+                    width: "50%",
+                    fontSize: "36px",
+                    fontWeight: "500",
+                    textAlign: "center",
+                    margin: "0 auto",
+                    marginTop: "25%"
+                } );
+                msg.innerText = "Sorry, WebGPU is not supported by your browser.";
+                document.body.appendChild(msg);
+                return;
+            } else {
+                const jsTemplate = document.getElementById("main-script");
+                const js = jsTemplate.content.cloneNode(true);
+                document.body.appendChild(js);
+            }
+        })();
     </script>
     <script type="text/javascript" src="../js/gl-matrix.js"></script>
     <script type="text/javascript" src="../js/litegl.js"></script>
     <script type="text/javascript" src="../js/hdr-tool.js"></script>
-    <script type="module" src="../js/script.js"></script>
-  </body>
+</body>
+
 </html>

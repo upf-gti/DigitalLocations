@@ -18,9 +18,21 @@ const App = window.App = {
         this.cameraTypes = [ "Flyover", "Orbit" ];
         this.cameraNames = [ ];
 
-        Module.onRuntimeInitialized = () => {
-         
-            this.initUI();
+        this.urlParams = new URLSearchParams( window.location.search );
+        this.scenePath = "../data/scenes/";
+
+        this.location = this.urlParams.get( 'location' );
+        this.dev = this.urlParams.get( 'dev' ) ? JSON.parse( this.urlParams.get( 'dev' ) ) : false;
+
+        this.initUI();
+
+        if( this.location )
+        {
+            // const fullPath = this.scenePath + this.location;
+            // LX.requestBinary( fullPath, ( data ) => {
+            //     this.loadGltf( fullPath, data );
+            // } );
+            // Module.Engine.loadGLB( fullPath );
         }
     },
 
@@ -52,34 +64,48 @@ const App = window.App = {
 
         this.modal.style.width = "100%";
         this.modal.style.height = "100%";
-        this.modal.style.opacity = "0.8";
+        this.modal.style.opacity = "0.9";
         this.modal.style.backgroundColor = "#000";
         this.modal.style.position = "absolute";
         this.modal.style.display = "none";
+        this.modal.style.cursor = "wait";
 
         this.toggleModal = () => this.modal.style.display = (this.modal.style.display == "block" ? "none" : "block");
 
         area.attach( this.modal );
 
-        new LX.PocketDialog( "Control Panel", p => {
+        this.dialog = new LX.PocketDialog( "Control Panel", p => {
 
             this.panel = p;
 
-            p.branch( "Digital Location", { closed: true } );
-            p.addText( "Name", "", null, { signal: "@location_name", disabled: true } );
-            p.addFile( "Load", (data, file) => this.loadGltf( file, data ), { type: 'buffer', local: false } );
-            p.addCheckbox( "Rotate", false, () => Module.Engine.toggleSceneRotation() );
-        
-            p.branch( "Environment", { closed: true } );
-            p.addText( "Name", "", null, { signal: "@environment_name", disabled: true } );
-            p.addFile( "Load", (data, file) => this.loadEnvironment( file, data ), { type: 'buffer', local: false } );
-        
-            p.branch( "Camera", { closed: true } );
+            if( this.dev )
+            {
+                p.branch( "Digital Location", { closed: true } );
+                p.addText( "Name", "", null, { signal: "@location_name", disabled: true } );
+                p.addFile( "Load", (data, file) => this.loadGltf( file, data ), { type: 'buffer', local: false } );
+                p.addCheckbox( "Rotate", false, () => Module.Engine.toggleSceneRotation() );
+            
+                p.branch( "Environment", { closed: true } );
+                p.addText( "Name", "", null, { signal: "@environment_name", disabled: true } );
+                p.addFile( "Load", (data, file) => this.loadEnvironment( file, data ), { type: 'buffer', local: false } );
+
+                p.branch( "Camera", { closed: true } );
+            }
+            else
+            {
+                p.addTitle( "Camera" );
+            }
+
             p.addDropdown( "Type", this.cameraTypes, "Flyover", (value) => this.setCameraType( value ) );
             p.addList( "Look at", this.cameraNames, "", (value) => this.lookAtCameraIndexFromName( value ) );
+            p.addButton( null, "Reset", () => this.resetCamera() );
         
         }, { size: [300, null], float: "right", draggable: false });
+    },
 
+    toggleUI( force ) {
+
+        this.dialog.root.hidden = force !== undefined ? (!force) : !this.dialog.root.hidden;
     },
 
     setCameraType( type ) {
@@ -89,6 +115,11 @@ const App = window.App = {
         const index = this.cameraTypes.indexOf( type );
 
         Module.Engine.setCameraType( index );
+    },
+
+    resetCamera() {
+
+        Module.Engine.resetCamera();
     },
 
     lookAtCameraIndexFromName( name ) {
@@ -160,7 +191,7 @@ const App = window.App = {
             return;
         }
         
-        this._loadGltf( file.name, data );
+        this._loadGltf( file.name ?? file, data );
     },
 
     async _updateCameraNames() {
@@ -187,7 +218,7 @@ const App = window.App = {
 
     async _loadGltf( name, buffer ) {
 
-        name = name.substring( name.lastIndexOf( '/' ) );
+        name = name.substring( name.lastIndexOf( '/' ) + 1 );
         
         console.log( "Loading glb", [ name, buffer ] );
 
