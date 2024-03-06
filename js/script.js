@@ -205,7 +205,10 @@ const App = window.App = {
             if( file.constructor == String )
             {
                 const path = file;
-                LX.requestBinary( path, ( data ) => this._loadGltf( path, data ) );
+                LX.requestBinary( path, ( data ) => this._loadGltf( path, data ), ( e ) => {
+                    LX.popup( e.constructor === String ? e :  `[${ path }] can't be loaded.`, "Request Blocked", { size: ["400px", "auto"], timeout: 10000 } );
+                    this.toggleModal( false );
+                } );
                 return;
             }
 
