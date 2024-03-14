@@ -1,8 +1,8 @@
 #include "sample_engine.h"
-#include "framework/entities/entity_mesh.h"
-#include "framework/entities/entity_text.h"
-#include "framework/entities/entity_camera.h"
-#include "framework/entities/entity_environment.h"
+#include "framework/nodes/mesh_instance_3d.h"
+#include "framework/nodes/text.h"
+#include "framework/nodes/camera.h"
+#include "framework/nodes/environment_3d.h"
 #include "framework/input.h"
 #include "framework/scene/parse_scene.h"
 #include "framework/scene/parse_gltf.h"
@@ -15,9 +15,9 @@
 
 #include "spdlog/spdlog.h"
 
-EntityEnvironment* SampleEngine::skybox = nullptr;
+Environment3D* SampleEngine::skybox = nullptr;
 
-std::vector<Entity*> SampleEngine::entities;
+std::vector<Node3D*> SampleEngine::entities;
 std::vector<EntityCamera*> SampleEngine::cameras;
 
 bool SampleEngine::rotate_scene = false;
@@ -33,10 +33,10 @@ int SampleEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_gl
 
     // Create skybox
 
-    skybox = new EntityEnvironment();
+    skybox = new Environment3D();
     entities.push_back(skybox);
 
-    EntityMesh* cube = parse_mesh("data/meshes/cube/cube.obj");
+    MeshInstance3D* cube = parse_mesh("data/meshes/cube/cube.obj");
     cube->scale(glm::vec3(0.1f));
     entities.push_back(cube);
 
@@ -143,7 +143,7 @@ void SampleEngine::render_gui()
         {
             if (ImGui::TreeNodeEx("Root", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                std::vector<Entity*>::iterator it = entities.begin();
+                std::vector<Node3D*>::iterator it = entities.begin();
                 while (it != entities.end())
                 {
                     if (show_tree_recursive(*it)) {
@@ -193,11 +193,11 @@ void SampleEngine::render_gui()
     ImGui::End();
 }
 
-bool SampleEngine::show_tree_recursive(Entity* entity)
+bool SampleEngine::show_tree_recursive(Node3D* entity)
 {
-    std::vector<Entity*>& children = entity->get_children();
+    std::vector<Node*>& children = entity->get_children();
 
-    EntityMesh* entity_mesh = dynamic_cast<EntityMesh*>(entity);
+    MeshInstance3D* entity_mesh = dynamic_cast<MeshInstance3D*>(entity);
 
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
 
@@ -229,11 +229,12 @@ bool SampleEngine::show_tree_recursive(Entity* entity)
             }
         }
 
-        std::vector<Entity*>::iterator it = children.begin();
+        std::vector<Node*>::iterator it = children.begin();
 
         while (it != children.end())
         {
-            if (show_tree_recursive(*it)) {
+            Node3D* node_3d = static_cast<Node3D*>(*it);
+            if (show_tree_recursive(node_3d)) {
                 it = children.erase(it);
             }
             else {
@@ -286,7 +287,7 @@ void SampleEngine::set_camera_type(int camera_type)
 void SampleEngine::reset_camera()
 {
     SampleRenderer* renderer = static_cast<SampleRenderer*>(SampleRenderer::instance);
-    Camera* camera = renderer->get_camera();
+    Camera3D* camera = static_cast<Camera3D*>(renderer->get_camera());
 
     for (auto entity : entities)
     {

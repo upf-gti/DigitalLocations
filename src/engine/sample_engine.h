@@ -7,10 +7,10 @@
 #include <string>
 #include <vector>
 
-class Entity;
-class EntityMesh;
+class Node3D;
+class MeshInstance3D;
 class EntityCamera;
-class EntityEnvironment;
+class Environment3D;
 
 class SampleEngine : public Engine {
 
@@ -19,13 +19,13 @@ class SampleEngine : public Engine {
     static LerpedValue<glm::vec3> eye_lerp;
     static LerpedValue<glm::vec3> center_lerp;
 
-    static std::vector<Entity*> entities;
+    static std::vector<Node3D*> entities;
     static std::vector<EntityCamera*> cameras;
-    static EntityEnvironment* skybox;
+    static Environment3D* skybox;
     static bool rotate_scene;
 
     void render_gui();
-    bool show_tree_recursive(Entity* entity);
+    bool show_tree_recursive(Node3D* entity);
 
 public:
 

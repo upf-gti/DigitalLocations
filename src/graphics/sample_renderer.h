@@ -35,7 +35,6 @@ class SampleRenderer : public Renderer {
     WGPUBindGroup           render_bind_group_camera = nullptr;
     Shader*                 render_mesh_shader = nullptr;
 
-    void init_depth_buffers();
     void init_camera_bind_group();
     void init_render_mesh_pipelines();
 
@@ -43,23 +42,6 @@ class SampleRenderer : public Renderer {
 
     void render_opaque(WGPURenderPassEncoder render_pass);
     void render_transparent(WGPURenderPassEncoder render_pass);
-
-#if defined(XR_SUPPORT)
-    void render_xr();
-
-    // For the XR mirror screen
-#if defined(USE_MIRROR_WINDOW)
-    void render_mirror();
-    void init_mirror_pipeline();
-
-    Pipeline mirror_pipeline;
-    Shader* mirror_shader = nullptr;
-
-    std::vector<Uniform> swapchain_uniforms;
-    std::vector<WGPUBindGroup> swapchain_bind_groups;
-#endif // USE_MIRROR_WINDOW
-
-#endif // XR_SUPPORT
 
 public:
 
