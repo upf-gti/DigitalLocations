@@ -18,6 +18,8 @@ const App = window.App = {
         this.cameraTypes = [ "Flyover", "Orbit" ];
         this.cameraNames = [ ];
 
+        this.cameraSpeed = 0.75;
+
         this.urlParams = new URLSearchParams( window.location.search );
 
         this.location = this.urlParams.get( 'location' );
@@ -106,6 +108,7 @@ const App = window.App = {
             }
 
             p.addDropdown( "Type", this.cameraTypes, "Flyover", (value) => this.setCameraType( value ) );
+            p.addNumber( "Speed", this.cameraSpeed, (value) => this.setCameraSpeed( value ), { min: 0.01, max: 8.0, step: 0.1 } );
             p.addList( "Look at", this.cameraNames, "", (value) => this.lookAtCameraIndexFromName( value ) );
             p.addButton( null, "Reset", () => this.resetCamera() );
         
@@ -134,6 +137,11 @@ const App = window.App = {
         const index = this.cameraTypes.indexOf( type );
 
         Module.Engine.setCameraType( index );
+    },
+
+    setCameraSpeed( value ) {
+
+        Module.Engine.setCameraSpeed( value );
     },
 
     resetCamera() {

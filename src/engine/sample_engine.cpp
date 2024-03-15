@@ -179,6 +179,14 @@ void SampleEngine::render_gui()
                 ImGui::EndCombo();
             }
 
+            Camera* camera = renderer->get_camera();
+            static float camera_speed = camera->get_speed();
+
+            if (ImGui::SliderFloat("Speed", &camera_speed, 0.0f, 10.0f))
+            {
+                set_camera_speed(camera_speed);
+            }
+
             if (ImGui::Button("Reset Camera"))
             {
                 reset_camera();
@@ -298,6 +306,12 @@ void SampleEngine::reset_camera()
             break;
         }
     }
+}
+
+void SampleEngine::set_camera_speed(float value)
+{
+    Camera* camera = Renderer::instance->get_camera();
+    camera->set_speed(value);
 }
 
 void SampleEngine::set_camera_lookat_index(int index)
