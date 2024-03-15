@@ -28,15 +28,10 @@ class SampleRenderer : public Renderer {
         float dummy;
     } camera_data;
 
-    Texture             eye_depth_textures[EYE_COUNT] = {};
-    WGPUTextureView     eye_depth_texture_view[EYE_COUNT] = {};
-
     // Mesh rendering
     WGPUBindGroup           render_bind_group_camera = nullptr;
-    Shader*                 render_mesh_shader = nullptr;
 
     void init_camera_bind_group();
-    void init_render_mesh_pipelines();
 
     void render_screen();
 

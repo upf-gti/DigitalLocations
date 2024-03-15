@@ -20,10 +20,7 @@ int SampleRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
 
     clear_color = glm::vec4(0.22f, 0.22f, 0.22f, 1.0);
 
-    init_depth_buffers();
     init_camera_bind_group();
-    init_ibl_bind_group();
-    init_render_mesh_pipelines();
 
     orbit_camera = new OrbitCamera();
     orbit_camera->set_perspective(glm::radians(45.0f), webgpu_context.render_width / static_cast<float>(webgpu_context.render_height), z_near, z_far);
@@ -38,6 +35,9 @@ int SampleRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     flyover_camera->set_speed(0.75f);
 
     camera = flyover_camera;
+
+    std::vector<Uniform*> uniforms = { &camera_uniform };
+    render_bind_group_camera = webgpu_context.create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/mesh_color.wgsl"), 1);
 
     return 0;
 }
@@ -54,12 +54,7 @@ void SampleRenderer::clean()
 
 void SampleRenderer::update(float delta_time)
 {
-    if (!is_openxr_available) {
-        if (const auto& io = ImGui::GetIO(); !io.WantCaptureMouse && !io.WantCaptureKeyboard) {
-            camera->update(delta_time);
-        }
-    }
-    else {
+    if (const auto& io = ImGui::GetIO(); !io.WantCaptureMouse && !io.WantCaptureKeyboard) {
         camera->update(delta_time);
     }
 }
@@ -184,19 +179,6 @@ void SampleRenderer::init_camera_bind_group()
     camera_uniform.data = webgpu_context.create_buffer(sizeof(sCameraData), WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform, nullptr, "camera_buffer");
     camera_uniform.binding = 0;
     camera_uniform.buffer_size = sizeof(sCameraData);
-}
-
-void SampleRenderer::init_render_mesh_pipelines()
-{
-    WebGPUContext* webgpu_context = SampleRenderer::instance->get_webgpu_context();
-    bool is_openxr_available = SampleRenderer::instance->get_openxr_available();
-
-    render_mesh_shader = RendererStorage::get_shader("data/shaders/mesh_color.wgsl");
-
-    // Camera
-    std::vector<Uniform*> uniforms = { dynamic_cast<SampleRenderer*>(SampleRenderer::instance)->get_current_camera_uniform() };
-
-    render_bind_group_camera = webgpu_context->create_bind_group(uniforms, render_mesh_shader, 1);
 }
 
 void SampleRenderer::resize_window(int width, int height)
