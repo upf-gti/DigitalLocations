@@ -37,7 +37,7 @@ int SampleRenderer::initialize(GLFWwindow* window, bool use_mirror_screen)
     camera = flyover_camera;
 
     std::vector<Uniform*> uniforms = { &camera_uniform };
-    render_bind_group_camera = webgpu_context.create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/mesh_color.wgsl"), 1);
+    render_bind_group_camera = webgpu_context.create_bind_group(uniforms, RendererStorage::get_shader("data/shaders/mesh_pbr.wgsl"), 1);
 
     return 0;
 }
@@ -46,10 +46,8 @@ void SampleRenderer::clean()
 {
     Renderer::clean();
 
-    wgpuTextureViewRelease(eye_depth_texture_view[EYE_LEFT]);
-    wgpuTextureViewRelease(eye_depth_texture_view[EYE_RIGHT]);
-
-    delete camera;
+    delete orbit_camera;
+    delete flyover_camera;
 }
 
 void SampleRenderer::update(float delta_time)

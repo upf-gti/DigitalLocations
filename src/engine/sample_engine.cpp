@@ -36,9 +36,9 @@ int SampleEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_gl
     skybox = new Environment3D();
     entities.push_back(skybox);
 
-    MeshInstance3D* cube = parse_mesh("data/meshes/cube/cube.obj");
-    cube->scale(glm::vec3(0.1f));
-    entities.push_back(cube);
+    //MeshInstance3D* cube = parse_mesh("data/meshes/cube/cube.obj");
+    //cube->scale(glm::vec3(0.1f));
+    //entities.push_back(cube);
 
     // load_glb("data/scenes/Cameras.glb");
 

@@ -64,7 +64,7 @@ if (EMSCRIPTEN)
         -sALLOW_MEMORY_GROWTH
         -sASYNCIFY
 #        -sWASM=0
-        -sASSERTIONS
+#        -sASSERTIONS
 #        -fsanitize=address
         -Wdeprecated-literal-operator
         -sSTACK_SIZE=5MB
