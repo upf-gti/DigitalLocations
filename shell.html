@@ -23,10 +23,16 @@
     </template>
     <script type='text/javascript'>
 
+        let time = new Date().getTime();
+
         var Module = {
             preRun: [],
             postRun: [],
             onRuntimeInitialized: () => {
+
+                let new_time = new Date().getTime();
+                console.warn("Load time: " + new_time - time);
+
                 var script = document.createElement( 'script' );
                 script.type = 'module';
                 script.src = "/js/script.js";

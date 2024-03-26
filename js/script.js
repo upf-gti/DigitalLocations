@@ -146,7 +146,14 @@ const App = window.App = {
 
     resetCamera() {
 
-        Module.Engine.resetCamera();
+        if( this.cameraNames.length )
+        {
+            this.lookAtCameraIndexFromName( this.cameraNames[ 0 ] );
+        }
+        else
+        {
+            Module.Engine.resetCamera();
+        }
     },
 
     lookAtCameraIndexFromName( name ) {
@@ -276,6 +283,11 @@ const App = window.App = {
         await this._updateCameraNames();
 
         this.panel.get( "Look at" ).updateValues( this.cameraNames );
+
+        if( this.cameraNames.length )
+        {
+            this.lookAtCameraIndexFromName( this.cameraNames[ 0 ] );
+        }
     },
 
     _fileStore( filename, buffer ) {

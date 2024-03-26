@@ -40,8 +40,6 @@ int SampleEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_gl
     //cube->scale(glm::vec3(0.1f));
     //entities.push_back(cube);
 
-    // load_glb("data/scenes/Cameras.glb");
-
 	return error;
 }
 
@@ -242,6 +240,7 @@ bool SampleEngine::show_tree_recursive(Node3D* entity)
         while (it != children.end())
         {
             Node3D* node_3d = static_cast<Node3D*>(*it);
+
             if (show_tree_recursive(node_3d)) {
                 it = children.erase(it);
             }
