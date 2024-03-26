@@ -205,7 +205,7 @@ fn compute(@builtin(global_invocation_id) id: vec3u)
 
         if (NdotL > 0.0)
         {
-            let radiance_ortho = sampleCubeMap(input_cubemap_texture, vec3f(0.0)).rgb;
+            let radiance_ortho = sampleCubeMap(input_cubemap_texture, L).rgb;
 
             color += radiance_ortho * NdotL;
             total_weight += NdotL;
