@@ -31,7 +31,7 @@
             onRuntimeInitialized: () => {
 
                 let new_time = new Date().getTime();
-                console.warn("Load time: " + new_time - time);
+                console.warn("Engine Load time: " + (new_time - time) + "ms");
 
                 var script = document.createElement( 'script' );
                 script.type = 'module';
