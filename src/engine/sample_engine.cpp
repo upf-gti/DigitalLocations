@@ -1,23 +1,21 @@
 #include "sample_engine.h"
-#include "framework/nodes/mesh_instance_3d.h"
-#include "framework/nodes/text.h"
-#include "framework/nodes/camera.h"
+
 #include "framework/nodes/environment_3d.h"
-#include "framework/input.h"
+#include "framework/nodes/camera.h"
 #include "framework/scene/parse_scene.h"
-#include "framework/scene/parse_gltf.h"
+#include "framework/camera/camera.h"
+#include "framework/camera/camera_3d.h"
+
 #include "graphics/sample_renderer.h"
+#include "graphics/renderer_storage.h"
 
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_wgpu.h"
+#include "glm/gtx/quaternion.hpp"
 
-#include "framework/utils/tinyfiledialogs.h"
+#include "engine/scene.h"
 
-#include "spdlog/spdlog.h"
+#include "shaders/mesh_grid.wgsl.gen.h"
 
-Environment3D* SampleEngine::skybox = nullptr;
-
-std::vector<Node3D*> SampleEngine::entities;
+MeshInstance3D* SampleEngine::skybox = nullptr;
 std::vector<EntityCamera*> SampleEngine::cameras;
 
 bool SampleEngine::rotate_scene = false;
@@ -27,18 +25,18 @@ std::string SampleEngine::last_camera_target_name = "Current";
 LerpedValue<glm::vec3> SampleEngine::eye_lerp;
 LerpedValue<glm::vec3> SampleEngine::center_lerp;
 
-int SampleEngine::initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen)
+int SampleEngine::initialize(Renderer* renderer, sEngineConfiguration configuration)
 {
-	int error = Engine::initialize(renderer, window, use_glfw, use_mirror_screen);
+	int error = Engine::initialize(renderer);
+
+    if (error) return error;
+
+    main_scene = new Scene("main_scene");
 
     // Create skybox
-
-    skybox = new Environment3D();
-    entities.push_back(skybox);
-
-    //MeshInstance3D* cube = parse_mesh("data/meshes/cube/cube.obj");
-    //cube->scale(glm::vec3(0.1f));
-    //entities.push_back(cube);
+    {
+        skybox = new Environment3D();
+    }
 
 	return error;
 }
@@ -50,12 +48,19 @@ void SampleEngine::clean()
 
 void SampleEngine::update(float delta_time)
 {
-    if (rotate_scene)
-        for (auto e : entities) e->rotate(delta_time, normals::pY);
+    std::vector<Node*>& scene_nodes = main_scene->get_nodes();
 
-    for (auto entity : entities) {
-        entity->update(delta_time);
+    if (rotate_scene) {
+        for (auto node : main_scene->get_nodes()) {
+            MeshInstance3D* mesh_node = dynamic_cast<MeshInstance3D*>(node);
+            if (mesh_node) {
+                mesh_node->rotate(delta_time, normals::pY);
+            }
+        }
     }
+
+    main_scene->update(delta_time);
+    skybox->update(delta_time);
 
     // Interpolate current camera position
     if (target_camera_idx == -1)
@@ -71,7 +76,7 @@ void SampleEngine::update(float delta_time)
         eye_lerp.value = smooth_damp(eye_lerp.value, new_eye, &eye_lerp.velocity, 0.50f, 20.0f, delta_time);
 
         // Lerp center
-        glm::vec3 front = normalize(camera->get_center() - camera->get_eye());
+        glm::vec3 front = glm::normalize(camera->get_center() - camera->get_eye());
         glm::quat rot = glm::rotation(front, get_front(cameras[target_camera_idx]->get_model()));
         front = glm::rotate(rot, front);
         glm::vec3 new_center = new_eye + front;
@@ -89,191 +94,39 @@ void SampleEngine::update(float delta_time)
 void SampleEngine::render()
 {
 #ifndef __EMSCRIPTEN__
-    render_gui();
+    render_default_gui();
 #endif
 
-	for (auto entity : entities) {
-		entity->render();
-	}
+    skybox->render();
+    main_scene->render();
 
 	Engine::render();
 }
 
-void SampleEngine::render_gui()
-{
-    if (SampleRenderer::instance->get_openxr_available()) {
-        return;
-    }
-    bool active = true;
-
-    ImGui::SetNextWindowSize({ 300, 400 });
-    ImGui::Begin("Debug panel", &active, ImGuiWindowFlags_MenuBar);
-
-    if (ImGui::BeginMenuBar())
-    {
-        if (ImGui::BeginMenu("File"))
-        {
-            if (ImGui::MenuItem("Open scene (.gltf, .glb, .obj)"))
-            {
-                std::vector<const char*> filter_patterns = { "*.gltf", "*.glb", "*.obj" };
-                char const* open_file_name = tinyfd_openFileDialog(
-                    "Scene loader",
-                    "",
-                    filter_patterns.size(),
-                    filter_patterns.data(),
-                    "Scene formats",
-                    0
-                );
-
-                if (open_file_name) {
-                    load_glb(open_file_name);
-                }
-            }
-            ImGui::EndMenu();
-        }
-        ImGui::EndMenuBar();
-    }
-
-    ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
-    if (ImGui::BeginTabBar("TabBar", tab_bar_flags))
-    {
-        if (ImGui::BeginTabItem("Scene"))
-        {
-            if (ImGui::TreeNodeEx("Root", ImGuiTreeNodeFlags_DefaultOpen))
-            {
-                std::vector<Node3D*>::iterator it = entities.begin();
-                while (it != entities.end())
-                {
-                    if (show_tree_recursive(*it)) {
-                        it = entities.erase(it);
-                    }
-                    else {
-                        it++;
-                    }
-                }
-
-                ImGui::TreePop();
-            }
-            ImGui::EndTabItem();
-        }
-        if (ImGui::BeginTabItem("Camera"))
-        {
-            static int camera_type = 0;
-
-            if (ImGui::Combo("Camera Type", &camera_type, "FLYOVER\0ORBIT"))
-            {
-                set_camera_type(camera_type);
-            }
-
-            if (ImGui::BeginCombo("Look at", last_camera_target_name.c_str()))
-            {
-                for (int i = 0; i < cameras.size(); ++i)
-                {
-                    static bool sel = true;
-                    if(ImGui::Selectable(cameras[i]->get_name().c_str(), &sel)) {
-                        set_camera_lookat_index(i);
-                    }
-                }
-                ImGui::EndCombo();
-            }
-
-            Camera* camera = renderer->get_camera();
-            static float camera_speed = camera->get_speed();
-
-            if (ImGui::SliderFloat("Speed", &camera_speed, 0.0f, 10.0f))
-            {
-                set_camera_speed(camera_speed);
-            }
-
-            if (ImGui::Button("Reset Camera"))
-            {
-                reset_camera();
-            }
-
-            ImGui::EndTabItem();
-        }
-        ImGui::EndTabBar();
-    }
-    ImGui::Separator();
-
-    ImGui::End();
-}
-
-bool SampleEngine::show_tree_recursive(Node3D* entity)
-{
-    std::vector<Node*>& children = entity->get_children();
-
-    MeshInstance3D* entity_mesh = dynamic_cast<MeshInstance3D*>(entity);
-
-    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-
-    if (!entity_mesh && children.empty() || (entity_mesh && children.empty() && entity_mesh->get_surfaces().empty())) {
-        flags |= ImGuiTreeNodeFlags_Leaf;
-    }
-
-    if (ImGui::TreeNodeEx(entity->get_name().c_str(), flags))
-    {
-        if (ImGui::BeginPopupContextItem()) // <-- use last item id as popup id
-        {
-            if (ImGui::Button("Delete")) {
-                ImGui::CloseCurrentPopup();
-                ImGui::EndPopup();
-                ImGui::TreePop();
-                return true;
-            }
-            ImGui::EndPopup();
-        }
-
-        if (entity_mesh) {
-
-            const std::vector<Surface*>& surfaces = entity_mesh->get_surfaces();
-
-            for (int i = 0; i < surfaces.size(); ++i) {
-
-                ImGui::TreeNodeEx(("Surface " + std::to_string(i)).c_str(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Leaf);
-                ImGui::TreePop();
-            }
-        }
-
-        std::vector<Node*>::iterator it = children.begin();
-
-        while (it != children.end())
-        {
-            Node3D* node_3d = static_cast<Node3D*>(*it);
-
-            if (show_tree_recursive(node_3d)) {
-                it = children.erase(it);
-            }
-            else {
-                it++;
-            }
-        }
-
-        ImGui::TreePop();
-    }
-
-    return false;
-}
-
 void SampleEngine::set_skybox_texture(const std::string& filename)
 {
-    skybox->set_texture(filename);
+    if (!skybox) {
+        return;
+    }
+
+    Texture* new_skybox = RendererStorage::get_texture(filename);
+    skybox->get_surface(0)->get_material()->set_diffuse_texture(new_skybox);
 }
 
 void SampleEngine::load_glb(const std::string& filename)
 {
-    entities.clear();
+    main_scene->delete_all();
 
-    // Add skybox again..
-    entities.push_back(skybox);
-
+    std::vector<Node*> entities;
     parse_scene(filename.c_str(), entities);
+
+    main_scene->add_nodes(entities);
 
     // Each time we load entities, get the cameras!
     cameras.clear();
-    for (auto entity : entities)
+    for (auto node : main_scene->get_nodes())
     {
-        EntityCamera* new_camera = dynamic_cast<EntityCamera*>(entity);
+        EntityCamera* new_camera = dynamic_cast<EntityCamera*>(node);
         if (new_camera) {
             cameras.push_back(new_camera);
         }
@@ -296,12 +149,13 @@ void SampleEngine::reset_camera()
     SampleRenderer* renderer = static_cast<SampleRenderer*>(SampleRenderer::instance);
     Camera3D* camera = static_cast<Camera3D*>(renderer->get_camera());
 
-    for (auto entity : entities)
+    for (auto node : main_scene->get_nodes())
     {
-        EntityCamera* is_camera = dynamic_cast<EntityCamera*>(entity);
+        EntityCamera* is_camera = dynamic_cast<EntityCamera*>(node);
         // Get first non camera
         if (!is_camera) {
-            camera->look_at_entity(entity);
+            MeshInstance3D* mesh_node = dynamic_cast<MeshInstance3D*>(node);
+            camera->look_at_entity(mesh_node);
             break;
         }
     }

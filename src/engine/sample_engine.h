@@ -1,16 +1,16 @@
 #pragma once
 
-#include "engine.h"
+#include "engine/engine.h"
 
-#include "framework/utils/utils.h"
+#include "glm/glm.hpp"
+
+#include "framework/math/math_utils.h"
 
 #include <string>
 #include <vector>
 
-class Node3D;
-class MeshInstance3D;
 class EntityCamera;
-class Environment3D;
+class MeshInstance3D;
 
 class SampleEngine : public Engine {
 
@@ -19,29 +19,25 @@ class SampleEngine : public Engine {
     static LerpedValue<glm::vec3> eye_lerp;
     static LerpedValue<glm::vec3> center_lerp;
 
-    static std::vector<Node3D*> entities;
+    static MeshInstance3D* skybox;
     static std::vector<EntityCamera*> cameras;
-    static Environment3D* skybox;
     static bool rotate_scene;
-
-    void render_gui();
-    bool show_tree_recursive(Node3D* entity);
 
 public:
 
-	int initialize(Renderer* renderer, GLFWwindow* window, bool use_glfw, bool use_mirror_screen) override;
+    int initialize(Renderer* renderer, sEngineConfiguration configuration = {}) override;
     void clean() override;
 
-	void update(float delta_time) override;
-	void render() override;
+    void update(float delta_time) override;
+    void render() override;
 
     // Methods to use in web demonstrator
-    static void set_skybox_texture(const std::string& filename);
-    static void load_glb(const std::string& filename);
-    static void toggle_rotation();
-    static void set_camera_type(int camera_type);
-    static void set_camera_lookat_index(int index);
-    static void reset_camera();
-    static void set_camera_speed(float value);
+    void set_skybox_texture(const std::string& filename);
+    void load_glb(const std::string& filename);
+    void toggle_rotation();
+    void set_camera_type(int camera_type);
+    void set_camera_lookat_index(int index);
+    void reset_camera();
+    void set_camera_speed(float value);
     static std::vector<std::string> get_cameras_names();
 };
