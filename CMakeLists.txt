@@ -5,7 +5,7 @@ set(GTI_FABW_DEMO_DIR_ROOT        ${CMAKE_CURRENT_SOURCE_DIR})
 set(GTI_FABW_DEMO_DIR_SOURCES     "${GTI_FABW_DEMO_DIR_ROOT}/src")
 set(GTI_FABW_DEMO_DIR_LIBS        "${GTI_FABW_DEMO_DIR_ROOT}/libraries")
 
-project(gti_fabw_demo LANGUAGES C CXX)
+project(digital_locations LANGUAGES C CXX)
 
 add_definitions(-D_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
 
