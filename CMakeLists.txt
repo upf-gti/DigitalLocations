@@ -45,7 +45,7 @@ add_executable(${PROJECT_NAME} ${GTI_FABW_DEMO_SOURCES})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${GTI_FABW_DEMO_DIR_SOURCES})
 
-#set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1")
+set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1")
 
 set_property(DIRECTORY ${GTI_FABW_DEMO_DIR_ROOT} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
@@ -58,9 +58,42 @@ endif()
 if (EMSCRIPTEN)
     set(SHELL_FILE shell.html)
 
+    include_directories(BEFORE
+        "${CMAKE_BINARY_DIR}/_deps/emdawn-src/include/"
+    )
+
+    add_library(webgpu_layer
+        "${CMAKE_BINARY_DIR}/_deps/emdawn-src/include/webgpu.cpp"
+    )
+    target_link_libraries(${PROJECT_NAME}
+        webgpu_layer
+    )
+
+    add_compile_options(
+        #"-fno-exceptions"
+        "$<$<CONFIG:Release>:-flto>"
+    )
+
+    add_link_options(
+        #"-fno-exceptions"
+        "$<$<CONFIG:Release>:-flto>"
+    )
+
     target_link_options(${PROJECT_NAME} PRIVATE
+
+        # -sVERBOSE
+
+        # We are using Dawn-generated bindings, not built-in ones
+        -sUSE_WEBGPU=0
+        # The JS libraries needed for bindings
+        "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_webgpu_enum_tables.js"
+        "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_webgpu_generated_struct_info.js"
+        "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_webgpu_generated_sig_info.js"
+        "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_webgpu.js"
+        "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_html5_webgpu.js"
+        "--closure-args=--externs=${CMAKE_BINARY_DIR}/_deps/emdawn-src/webgpu-externs.js"
+
         -sUSE_GLFW=3
-        -sUSE_WEBGPU
         -sALLOW_MEMORY_GROWTH
         -sASYNCIFY
 #        -sWASM=0
@@ -68,12 +101,15 @@ if (EMSCRIPTEN)
 #        -fsanitize=address
         -Wdeprecated-literal-operator
         -sSTACK_SIZE=5MB
+        -sASYNCIFY_STACK_SIZE=10000
         -lembind # to bind functions from c++ to javascript
 #        -O3
+#        -sWASM_BIGINT
         # only for dev
 #        -sERROR_ON_WASM_CHANGES_AFTER_LINK
-#        -sWASM_BIGINT
+        -O0
         # ------------
+
         --shell-file "${GTI_FABW_DEMO_DIR_ROOT}/${SHELL_FILE}"
         --preload-file "${GTI_FABW_DEMO_DIR_ROOT}/data@/data"
 	)

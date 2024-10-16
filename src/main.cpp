@@ -12,15 +12,14 @@
 EMSCRIPTEN_BINDINGS(_Class_) {
     emscripten::class_<SampleEngine>("Engine")
         .constructor<>()
-        .class_function("setEnvironment", &SampleEngine::set_skybox_texture)
-        .class_function("loadGLB", &SampleEngine::load_glb)
-        .class_function("setCameraType", &SampleEngine::set_camera_type)
+        .function("setEnvironment", &SampleEngine::set_skybox_texture)
+        .function("loadGLB", &SampleEngine::load_glb)
+        .function("setCameraType", &SampleEngine::set_camera_type)
         .class_function("getCameraNames", &SampleEngine::get_cameras_names)
-        .class_function("setCameraLookAtIndex", &SampleEngine::set_camera_lookat_index)
-        .class_function("setCameraSpeed", &SampleEngine::set_camera_speed)
-        .class_function("resetCamera", &SampleEngine::reset_camera)
-        .class_function("toggleSceneRotation", &SampleEngine::toggle_rotation)
-        .class_function("get_instance", &SampleEngine::get_instance);
+        .function("setCameraLookAtIndex", &SampleEngine::set_camera_lookat_index)
+        .function("setCameraSpeed", &SampleEngine::set_camera_speed)
+        .function("resetCamera", &SampleEngine::reset_camera)
+        .function("toggleSceneRotation", &SampleEngine::toggle_rotation);
 
     emscripten::register_vector<std::string>("vector<string>");
 }
@@ -46,7 +45,11 @@ int main()
 
     renderer->set_required_limits(required_limits);
 
-    if (engine->initialize(renderer)) {
+    sEngineConfiguration configuration;
+    configuration.window_width = 640;
+    configuration.window_height = 360;
+
+    if (engine->initialize(renderer, configuration)) {
         return 1;
     }
 
