@@ -14,14 +14,14 @@ class MeshInstance3D;
 
 class SampleEngine : public Engine {
 
-    static int target_camera_idx;
-    static std::string last_camera_target_name;
-    static LerpedValue<glm::vec3> eye_lerp;
-    static LerpedValue<glm::vec3> center_lerp;
+    int target_camera_idx = -1;
+    std::string last_camera_target_name = "Current";
+    LerpedValue<glm::vec3> eye_lerp;
+    LerpedValue<glm::vec3> center_lerp;
 
-    static MeshInstance3D* skybox;
-    static std::vector<EntityCamera*> cameras;
-    static bool rotate_scene;
+    MeshInstance3D* skybox = nullptr;
+    std::vector<EntityCamera*> cameras;
+    bool rotate_scene = false;
 
 public:
 
@@ -29,16 +29,18 @@ public:
 
     void clean() override;
 
+    static SampleEngine* get_sample_instance() { return static_cast<SampleEngine*>(instance); }
+
     void update(float delta_time) override;
     void render() override;
 
     // Methods to use in web demonstrator
     void set_skybox_texture(const std::string& filename);
-    void load_glb(const std::string& filename);
+    std::vector<std::string> load_glb(const std::string& filename);
     void toggle_rotation();
     void set_camera_type(int camera_type);
     void set_camera_lookat_index(int index);
     void reset_camera();
     void set_camera_speed(float value);
-    static std::vector<std::string> get_cameras_names();
+    std::vector<std::string> get_cameras_names();
 };

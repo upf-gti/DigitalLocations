@@ -15,16 +15,6 @@
 
 #include "shaders/mesh_grid.wgsl.gen.h"
 
-MeshInstance3D* SampleEngine::skybox = nullptr;
-std::vector<EntityCamera*> SampleEngine::cameras;
-
-bool SampleEngine::rotate_scene = false;
-int SampleEngine::target_camera_idx = -1;
-std::string SampleEngine::last_camera_target_name = "Current";
-
-LerpedValue<glm::vec3> SampleEngine::eye_lerp;
-LerpedValue<glm::vec3> SampleEngine::center_lerp;
-
 int SampleEngine::initialize(Renderer* renderer, sEngineConfiguration configuration)
 {
     int error = Engine::initialize(renderer);
@@ -85,12 +75,10 @@ void SampleEngine::update(float delta_time)
     main_scene->update(delta_time);
     skybox->update(delta_time);
 
+    Engine::update(delta_time);
+
     // Interpolate current camera position
-    if (target_camera_idx == -1)
-    {
-        Engine::update(delta_time);
-    }
-    else
+    if (target_camera_idx != -1)
     {
         Camera* camera = renderer->get_camera();
 
@@ -136,7 +124,7 @@ void SampleEngine::set_skybox_texture(const std::string& filename)
     skybox->get_surface(0)->get_material()->set_diffuse_texture(new_skybox);
 }
 
-void SampleEngine::load_glb(const std::string& filename)
+std::vector<std::string> SampleEngine::load_glb(const std::string& filename)
 {
     main_scene->delete_all();
 
@@ -145,15 +133,27 @@ void SampleEngine::load_glb(const std::string& filename)
 
     main_scene->add_nodes(entities);
 
-    // Each time we load entities, get the cameras!
     cameras.clear();
-    for (auto node : main_scene->get_nodes())
-    {
+
+    std::function<void(Node*)> recurse_tree = [&](Node* node) {
         EntityCamera* new_camera = dynamic_cast<EntityCamera*>(node);
         if (new_camera) {
             cameras.push_back(new_camera);
         }
+
+        if (!node->get_children().empty()) {
+            for (auto child : node->get_children()) {
+                recurse_tree(child);
+            }
+        }
+    };
+
+    // Each time we load entities, get the cameras!
+    for (auto node : main_scene->get_nodes()) {
+        recurse_tree(node);
     }
+
+    return get_cameras_names();
 }
 
 void SampleEngine::toggle_rotation()
@@ -208,10 +208,11 @@ void SampleEngine::set_camera_lookat_index(int index)
 std::vector<std::string> SampleEngine::get_cameras_names()
 {
     std::vector<std::string> names;
+    names.resize(cameras.size());
 
-    for (auto camera : cameras)
+    for (int i = 0; i < cameras.size(); ++i)
     {
-        names.push_back(camera->get_name());
+        names[i] = cameras[i]->get_name();
     }
 
     return names;

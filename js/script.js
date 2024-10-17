@@ -9,7 +9,7 @@ function _processVector( vector )
     return array;
 }
 
-const App = window.App = {
+window.App = {
 
     dragSupportedExtensions: [ 'hdr', 'hdre', 'glb' ],
 
@@ -31,10 +31,7 @@ const App = window.App = {
         if( this.location )
         {
             this.toggleModal( true );
-
-            setTimeout( () => {
-                this.loadGltf( this.location );
-            }, 150 );
+            this.loadGltf( this.location );
         }
     },
 
@@ -94,7 +91,7 @@ const App = window.App = {
                 p.branch( "Digital Location", { closed: true } );
                 p.addText( "Name", "", null, { signal: "@location_name", disabled: true } );
                 p.addFile( "Load", (data, file) => this.loadGltf( file, data ), { type: 'buffer', local: false, onBeforeRead: onBeforeRead } );
-                p.addCheckbox( "Rotate", false, () => Module.Engine.toggleSceneRotation() );
+                p.addCheckbox( "Rotate", false, () => window.engine_instance.toggleSceneRotation() );
             
                 p.branch( "Environment", { closed: true } );
                 p.addText( "Name", "", null, { signal: "@environment_name", disabled: true } );
@@ -136,12 +133,12 @@ const App = window.App = {
 
         const index = this.cameraTypes.indexOf( type );
 
-        Module.Engine.setCameraType( index );
+        window.engine_instance.setCameraType( index );
     },
 
     setCameraSpeed( value ) {
 
-        Module.Engine.setCameraSpeed( value );
+        window.engine_instance.setCameraSpeed( value );
     },
 
     resetCamera() {
@@ -152,7 +149,7 @@ const App = window.App = {
         }
         else
         {
-            Module.Engine.resetCamera();
+            window.engine_instance.resetCamera();
         }
     },
 
@@ -162,7 +159,7 @@ const App = window.App = {
 
         const index = this.cameraNames.indexOf( name );
 
-        Module.Engine.setCameraLookAtIndex( index );
+        window.engine_instance.setCameraLookAtIndex( index );
     },
 
     parseEnvironment( name, data ) {
@@ -236,13 +233,6 @@ const App = window.App = {
         this._loadGltf( file.name ?? file, data );
     },
 
-    async _updateCameraNames() {
-
-        var cameraNamesVector = await Module.Engine.getCameraNames();
-        
-        this.cameraNames = _processVector( cameraNamesVector );
-    },
-
     _loadEnvironment( name, buffer ) {
 
         name = name.substring( name.lastIndexOf( '/' ) );
@@ -252,7 +242,7 @@ const App = window.App = {
         this._fileStore( name, buffer );
 
         // This will load the hdre and set texture to the skybox
-        Module.Engine.setEnvironment( name );
+        window.engine_instance.setEnvironment( name );
 
         this.toggleModal( false );
 
@@ -270,7 +260,7 @@ const App = window.App = {
 
         this._fileStore( name, buffer );
 
-        Module.Engine.loadGLB( name );
+        var cameraNamesVector = await window.engine_instance.loadGLB( name )
 
         this.toggleModal( false );
 
@@ -280,7 +270,7 @@ const App = window.App = {
 
         // Update Camera look at points
 
-        await this._updateCameraNames();
+        this.cameraNames = _processVector( cameraNamesVector );
 
         this.panel.get( "Look at" ).updateValues( this.cameraNames );
 
@@ -299,4 +289,14 @@ const App = window.App = {
     }
 };
 
-App.init();
+Promise.resolve(Module.Engine.getInstance()).then((_result) => {
+
+    if (_result == null) {
+        console.error("Module Instance is null");
+    }
+
+    window.engine_instance = _result;
+    window.App.init();
+}).catch((error) => {
+    console.log(error)
+})

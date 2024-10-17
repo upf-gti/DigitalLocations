@@ -15,7 +15,7 @@ EMSCRIPTEN_BINDINGS(_Class_) {
         .function("setEnvironment", &SampleEngine::set_skybox_texture)
         .function("loadGLB", &SampleEngine::load_glb)
         .function("setCameraType", &SampleEngine::set_camera_type)
-        .class_function("getCameraNames", &SampleEngine::get_cameras_names)
+        .class_function("getInstance", &SampleEngine::get_sample_instance, emscripten::return_value_policy::reference())
         .function("setCameraLookAtIndex", &SampleEngine::set_camera_lookat_index)
         .function("setCameraSpeed", &SampleEngine::set_camera_speed)
         .function("resetCamera", &SampleEngine::reset_camera)
