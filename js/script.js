@@ -91,7 +91,7 @@ window.App = {
                 p.branch( "Digital Location", { closed: true } );
                 p.addText( "Name", "", null, { signal: "@location_name", disabled: true } );
                 p.addFile( "Load", (data, file) => this.loadGltf( file, data ), { type: 'buffer', local: false, onBeforeRead: onBeforeRead } );
-                p.addCheckbox( "Rotate", false, () => window.engine_instance.toggleSceneRotation() );
+                p.addCheckbox( "Rotate", false, () => window.engineInstance.toggleSceneRotation() );
             
                 p.branch( "Environment", { closed: true } );
                 p.addText( "Name", "", null, { signal: "@environment_name", disabled: true } );
@@ -133,12 +133,12 @@ window.App = {
 
         const index = this.cameraTypes.indexOf( type );
 
-        window.engine_instance.setCameraType( index );
+        window.engineInstance.setCameraType( index );
     },
 
     setCameraSpeed( value ) {
 
-        window.engine_instance.setCameraSpeed( value );
+        window.engineInstance.setCameraSpeed( value );
     },
 
     resetCamera() {
@@ -149,7 +149,7 @@ window.App = {
         }
         else
         {
-            window.engine_instance.resetCamera();
+            window.engineInstance.resetCamera();
         }
     },
 
@@ -159,7 +159,7 @@ window.App = {
 
         const index = this.cameraNames.indexOf( name );
 
-        window.engine_instance.setCameraLookAtIndex( index );
+        window.engineInstance.setCameraLookAtIndex( index );
     },
 
     parseEnvironment( name, data ) {
@@ -242,7 +242,7 @@ window.App = {
         this._fileStore( name, buffer );
 
         // This will load the hdre and set texture to the skybox
-        window.engine_instance.setEnvironment( name );
+        window.engineInstance.setEnvironment( name );
 
         this.toggleModal( false );
 
@@ -260,7 +260,7 @@ window.App = {
 
         this._fileStore( name, buffer );
 
-        var cameraNamesVector = await window.engine_instance.loadGLB( name )
+        var cameraNamesVector = await window.engineInstance.loadGLB( name );
 
         this.toggleModal( false );
 
@@ -289,14 +289,19 @@ window.App = {
     }
 };
 
-Promise.resolve(Module.Engine.getInstance()).then((_result) => {
+// Use timeout for now to avoid getting null (Engine not loaded?)
+setTimeout( () => {
 
-    if (_result == null) {
-        console.error("Module Instance is null");
-    }
+    Promise.resolve( Module.Engine.getInstance() ).then( result => {
 
-    window.engine_instance = _result;
-    window.App.init();
-}).catch((error) => {
-    console.log(error)
-})
+        if ( !result ) {
+            console.error( "Module Instance is null" );
+        }
+
+        window.engineInstance = result;
+        window.App.init();
+
+    } ).catch( error => {
+        console.log( error );
+    });
+}, 250 );
