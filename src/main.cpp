@@ -46,8 +46,9 @@ int main()
     renderer->set_required_limits(required_limits);
 
     sEngineConfiguration configuration;
-    configuration.window_width = 640;
-    configuration.window_height = 360;
+    configuration.window_width = 1600;
+    configuration.window_height = 900;
+    configuration.camera_type = CAMERA_ORBIT;
 
     if (engine->initialize(renderer, configuration)) {
         return 1;

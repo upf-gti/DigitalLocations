@@ -5,6 +5,7 @@
 #include "framework/parsers/parse_scene.h"
 #include "framework/camera/camera.h"
 #include "framework/camera/camera_3d.h"
+#include "framework/input.h"
 
 #include "graphics/sample_renderer.h"
 #include "graphics/renderer_storage.h"
@@ -17,7 +18,7 @@
 
 int SampleEngine::initialize(Renderer* renderer, sEngineConfiguration configuration)
 {
-    int error = Engine::initialize(renderer);
+    int error = Engine::initialize(renderer, configuration);
 
     if (error) return error;
 
@@ -77,27 +78,40 @@ void SampleEngine::update(float delta_time)
 
     Engine::update(delta_time);
 
+    //if (Input::was_key_pressed(GLFW_KEY_O)) {
+    //    set_camera_type(CAMERA_ORBIT);
+    //}
+
+    //if (Input::was_key_pressed(GLFW_KEY_F)) {
+    //    set_camera_type(CAMERA_FLYOVER);
+    //}
+
     // Interpolate current camera position
     if (target_camera_idx != -1)
     {
-        Camera* camera = renderer->get_camera();
-
         // Lerp eye
         glm::vec3 new_eye = cameras[target_camera_idx]->get_translation();
         eye_lerp.value = smooth_damp(eye_lerp.value, new_eye, &eye_lerp.velocity, 0.50f, 20.0f, delta_time);
 
-        // Lerp center
-        glm::vec3 front = glm::normalize(camera->get_center() - camera->get_eye());
-        glm::quat rot = glm::rotation(front, get_front(cameras[target_camera_idx]->get_model()));
-        front = glm::rotate(rot, front);
-        glm::vec3 new_center = new_eye + front;
-        center_lerp.value = smooth_damp(center_lerp.value, new_center, &center_lerp.velocity, 0.50f, 20.0f, delta_time);
+        Camera* camera = renderer->get_camera();
+        camera->look_at(eye_lerp.value, camera->get_center(), camera->get_up());
 
-        camera->look_at(eye_lerp.value, center_lerp.value, camera->get_up());
-
-        if (glm::distance(eye_lerp.value, new_eye) < 0.01f && glm::distance(center_lerp.value, new_center) < 0.01f)
+        if (glm::distance(eye_lerp.value, new_eye) < 0.01f)
         {
             target_camera_idx = -1;
+        }
+    }
+
+    if (lerp_center) {
+        // Lerp center
+        center_lerp.value = smooth_damp(center_lerp.value, target_center, &center_lerp.velocity, 0.25f, 20.0f, delta_time);
+
+        Camera* camera = renderer->get_camera();
+        camera->look_at(camera->get_eye(), center_lerp.value, camera->get_up());
+
+        if (glm::distance(center_lerp.value, target_center) < 0.01f)
+        {
+            lerp_center = false;
         }
     }
 }
@@ -153,6 +167,12 @@ std::vector<std::string> SampleEngine::load_glb(const std::string& filename)
         recurse_tree(node);
     }
 
+    reset_camera();
+
+    if (!cameras.empty()) {
+        set_camera_lookat_index(0);
+    }
+
     return get_cameras_names();
 }
 
@@ -164,7 +184,14 @@ void SampleEngine::toggle_rotation()
 void SampleEngine::set_camera_type(int camera_type)
 {
     SampleRenderer* renderer = static_cast<SampleRenderer*>(SampleRenderer::instance);
-    renderer->set_camera_type(camera_type);
+
+    if (camera_type == CAMERA_ORBIT) {
+        //renderer->get_camera()->set_center(glm::vec3(target_center));
+        center_lerp.value = renderer->get_camera()->get_center();
+        lerp_center = true;
+    }
+
+    renderer->set_camera_type(static_cast<eCameraType>(camera_type));
 }
 
 void SampleEngine::reset_camera()
@@ -177,9 +204,14 @@ void SampleEngine::reset_camera()
         EntityCamera* is_camera = dynamic_cast<EntityCamera*>(node);
         // Get first non camera
         if (!is_camera) {
-            MeshInstance3D* mesh_node = dynamic_cast<MeshInstance3D*>(node);
-            camera->look_at_entity(mesh_node);
-            break;
+            Node3D* mesh_node = dynamic_cast<Node3D*>(node);
+            if (mesh_node)
+            {
+                camera->look_at_entity(mesh_node);
+                target_center = mesh_node->get_aabb().center;
+                lerp_center = true;
+                break;
+            }
         }
     }
 }

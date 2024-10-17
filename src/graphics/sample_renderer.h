@@ -4,11 +4,6 @@
 
 #include "graphics/renderer.h"
 
-enum {
-    CAMERA_FLYOVER,
-    CAMERA_ORBIT
-};
-
 class SampleRenderer : public Renderer {
 
 public:
@@ -20,6 +15,4 @@ public:
 
     void update(float delta_time) override;
     void render() override;
-
-    void set_camera_type(int camera_type);
 };

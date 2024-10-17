@@ -19,6 +19,9 @@ class SampleEngine : public Engine {
     LerpedValue<glm::vec3> eye_lerp;
     LerpedValue<glm::vec3> center_lerp;
 
+    glm::vec3 target_center = {};
+    bool lerp_center = false;
+
     MeshInstance3D* skybox = nullptr;
     std::vector<EntityCamera*> cameras;
     bool rotate_scene = false;
