@@ -289,19 +289,18 @@ window.App = {
     }
 };
 
-// Use timeout for now to avoid getting null (Engine not loaded?)
-setTimeout( () => {
+var inst = Module.Engine.getInstance()
+console.log(inst)
 
-    Promise.resolve( Module.Engine.getInstance() ).then( result => {
+Promise.resolve( inst ).then( result => {
 
-        if ( !result ) {
-            console.error( "Module Instance is null" );
-        }
+    if ( !result ) {
+        console.error( "Module Instance is null" );
+    }
 
-        window.engineInstance = result;
-        window.App.init();
+    window.engineInstance = result;
+    window.App.init();
 
-    } ).catch( error => {
-        console.log( error );
-    });
-}, 250 );
+} ).catch( error => {
+    console.log( error );
+});

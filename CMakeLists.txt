@@ -99,19 +99,19 @@ if (EMSCRIPTEN)
 
         -sUSE_GLFW=3
         -sALLOW_MEMORY_GROWTH
-        -sASYNCIFY
+#        -sASYNCIFY
 #        -sWASM=0
 #        -sASSERTIONS
 #        -fsanitize=address
         -Wdeprecated-literal-operator
         -sSTACK_SIZE=5MB
-        -sASYNCIFY_STACK_SIZE=10000
+#        -sASYNCIFY_STACK_SIZE=10000
         -lembind # to bind functions from c++ to javascript
-#        -O3
+        -O3
 #        -sWASM_BIGINT
         # only for dev
 #        -sERROR_ON_WASM_CHANGES_AFTER_LINK
-        -O0
+#        -O0
         # ------------
 
         --shell-file "${GTI_FABW_DEMO_DIR_ROOT}/${SHELL_FILE}"
