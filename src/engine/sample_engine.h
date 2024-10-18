@@ -41,6 +41,7 @@ public:
     // Methods to use in web demonstrator
     void set_skybox_texture(const std::string& filename);
     std::vector<std::string> load_glb(const std::string& filename);
+    void load_ply(const std::string& filename);
     void toggle_rotation();
     void set_camera_type(int camera_type);
     void set_camera_lookat_index(int index);

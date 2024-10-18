@@ -11,11 +11,11 @@ function _processVector( vector )
 
 window.App = {
 
-    dragSupportedExtensions: [ 'hdr', 'hdre', 'glb' ],
+    dragSupportedExtensions: [ 'hdr', 'hdre', 'glb', 'ply' ],
 
     init() {
 
-        this.cameraTypes = [ "Flyover", "Orbit" ];
+        this.cameraTypes = [ "Orbit", "Flyover" ];
         this.cameraNames = [ ];
 
         this.cameraSpeed = 0.75;
@@ -31,7 +31,12 @@ window.App = {
         if( this.location )
         {
             this.toggleModal( true );
-            this.loadGltf( this.location );
+
+            const ext = LX.getExtension( this.location );
+            switch( ext ) {
+                case 'glb': this.loadLocation.call( this, this._loadGltf, this.location ); break;
+                case 'ply': this.loadLocation.call( this, this._loadPly, this.location ); break;
+            }
         }
     },
 
@@ -54,7 +59,8 @@ window.App = {
             switch( ext ) {
                 case 'hdr':
                 case 'hdre': this.loadEnvironment( file ); break;
-                case 'glb': this.loadGltf( file ); break;
+                case 'glb': this.loadLocation( this._loadGltf, file ); break;
+                case 'ply': this.loadLocation( this._loadPly, file ); break;
             }
         });
 
@@ -90,7 +96,7 @@ window.App = {
             {
                 p.branch( "Digital Location", { closed: true } );
                 p.addText( "Name", "", null, { signal: "@location_name", disabled: true } );
-                p.addFile( "Load", (data, file) => this.loadGltf( file, data ), { type: 'buffer', local: false, onBeforeRead: onBeforeRead } );
+                // p.addFile( "Load", (data, file) => this.loadGltf( file, data ), { type: 'buffer', local: false, onBeforeRead: onBeforeRead } );
                 p.addCheckbox( "Rotate", false, () => window.engineInstance.toggleSceneRotation() );
             
                 p.branch( "Environment", { closed: true } );
@@ -104,7 +110,7 @@ window.App = {
                 p.addTitle( "Camera" );
             }
 
-            p.addDropdown( "Type", this.cameraTypes, "Flyover", (value) => this.setCameraType( value ) );
+            p.addDropdown( "Type", this.cameraTypes, "Orbit", (value) => this.setCameraType( value ) );
             p.addNumber( "Speed", this.cameraSpeed, (value) => this.setCameraSpeed( value ), { min: 0.01, max: 8.0, step: 0.1 } );
             p.addList( "Look at", this.cameraNames, "", (value) => this.lookAtCameraIndexFromName( value ) );
             p.addButton( null, "Reset", () => this.resetCamera() );
@@ -209,7 +215,7 @@ window.App = {
         this._loadEnvironment( file.name, data );
     },
 
-    loadGltf( file, data ) {
+    loadLocation( loader, file, data ) {
 
         if( !data )
         {
@@ -217,7 +223,7 @@ window.App = {
             if( file.constructor == String )
             {
                 const path = file;
-                LX.requestBinary( path, ( data ) => this._loadGltf( path, data ), ( e ) => {
+                LX.requestBinary( path, ( data ) => loader.call(this, path, data ), ( e ) => {
                     LX.popup( e.constructor === String ? e :  `[${ path }] can't be loaded.`, "Request Blocked", { size: ["400px", "auto"], timeout: 10000 } );
                     this.toggleModal( false );
                 } );
@@ -226,11 +232,11 @@ window.App = {
 
             const reader = new FileReader();
             reader.readAsArrayBuffer( file );
-            reader.onload = e => this._loadGltf( file.name, e.target.result );
+            reader.onload = e => loader.call(this, file.name, e.target.result );
             return;
         }
         
-        this._loadGltf( file.name ?? file, data );
+        loader.call(this, file.name ?? file, data );
     },
 
     _loadEnvironment( name, buffer ) {
@@ -250,17 +256,15 @@ window.App = {
         LX.emit( '@environment_name', name.replace( /.hdre|.hdr/, "" ) );
     },
 
-    async _loadGltf( name, buffer ) {
+    _loadGltf( name, buffer ) {
 
         name = name.substring( name.lastIndexOf( '/' ) + 1 );
         
         console.log( "Loading glb", [ name, buffer ] );
 
-        console.log(name, buffer);
-
         this._fileStore( name, buffer );
 
-        var cameraNamesVector = await window.engineInstance.loadGLB( name );
+        var cameraNamesVector = window.engineInstance.loadGLB( name );
 
         this.toggleModal( false );
 
@@ -278,6 +282,26 @@ window.App = {
         {
             this.lookAtCameraIndexFromName( this.cameraNames[ 0 ] );
         }
+    },
+
+    _loadPly( name, buffer ) {
+
+        name = name.substring( name.lastIndexOf( '/' ) + 1 );
+
+        console.log( "Loading ply", [ name, buffer ] );
+
+        this._fileStore( name, buffer );
+
+        window.engineInstance.loadPly( name );
+
+        this.cameraNames = []
+        this.panel.get( "Look at" ).updateValues( this.cameraNames );
+
+        this.toggleModal( false );
+
+        // Update UI
+
+        LX.emit( '@location_name', name.replace( '.ply', '' ) );
     },
 
     _fileStore( filename, buffer ) {

@@ -181,6 +181,18 @@ std::vector<std::string> SampleEngine::load_glb(const std::string& filename)
     return get_cameras_names();
 }
 
+void SampleEngine::load_ply(const std::string& filename)
+{
+    main_scene->delete_all();
+
+    std::vector<Node*> entities;
+    parse_scene(filename.c_str(), entities);
+
+    main_scene->add_nodes(entities);
+
+    cameras.clear();
+}
+
 void SampleEngine::toggle_rotation()
 {
     rotate_scene = !rotate_scene;

@@ -14,6 +14,7 @@ EMSCRIPTEN_BINDINGS(_Class_) {
         .constructor<>()
         .function("setEnvironment", &SampleEngine::set_skybox_texture)
         .function("loadGLB", &SampleEngine::load_glb)
+        .function("loadPly", &SampleEngine::load_ply)
         .function("setCameraType", &SampleEngine::set_camera_type)
         .class_function("getInstance", &SampleEngine::get_sample_instance, emscripten::return_value_policy::reference())
         .function("setCameraLookAtIndex", &SampleEngine::set_camera_lookat_index)
@@ -49,6 +50,7 @@ int main()
     configuration.window_width = 1600;
     configuration.window_height = 900;
     configuration.camera_type = CAMERA_ORBIT;
+    configuration.msaa_count = 4;
 
     if (engine->initialize(renderer, configuration)) {
         return 1;
