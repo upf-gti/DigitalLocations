@@ -78,10 +78,10 @@ void SampleEngine::update(float delta_time)
         }
     }
 
+    Engine::update(delta_time);
+
     main_scene->update(delta_time);
     skybox->update(delta_time);
-
-    Engine::update(delta_time);
 
     //if (Input::was_key_pressed(GLFW_KEY_O)) {
     //    set_camera_type(CAMERA_ORBIT);

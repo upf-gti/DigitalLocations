@@ -289,10 +289,8 @@ window.App = {
     }
 };
 
-var inst = Module.Engine.getInstance()
-console.log(inst)
 
-Promise.resolve( inst ).then( result => {
+Promise.resolve( Module.Engine.getInstance() ).then( result => {
 
     if ( !result ) {
         console.error( "Module Instance is null" );
