@@ -103,6 +103,7 @@ if (EMSCRIPTEN)
 #        -sWASM=0
 #        -sASSERTIONS
 #        -fsanitize=address
+#        -sMAXIMUM_MEMORY=2GB
         -Wdeprecated-literal-operator
         -sSTACK_SIZE=5MB
 #        -sASYNCIFY_STACK_SIZE=10000
