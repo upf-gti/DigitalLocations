@@ -1,4 +1,4 @@
-# DemoFABW-GTI
+# Digital Locations
 
 Demo of the collaboration between the UPF-GTI and FABW for the MAX-R project, using [wgpuEngine](https://github.com/upf-gti/wgpuEngine), the engine used in [Rooms](https://github.com/upf-gti/rooms).
 
