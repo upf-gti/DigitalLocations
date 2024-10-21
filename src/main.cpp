@@ -51,6 +51,7 @@ int main()
     configuration.window_height = 900;
     configuration.camera_type = CAMERA_ORBIT;
     configuration.msaa_count = 4;
+    configuration.window_title = "Digital Locations";
 
     if (engine->initialize(renderer, configuration)) {
         return 1;
