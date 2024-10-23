@@ -1,3 +1,6 @@
 [submodule "libraries/wgpuEngine"]
 	path = libraries/wgpuEngine
 	url = https://github.com/upf-gti/wgpuEngine.git
+[submodule "libraries/libzmq"]
+	path = libraries/libzmq
+	url = https://github.com/zeromq/libzmq.git

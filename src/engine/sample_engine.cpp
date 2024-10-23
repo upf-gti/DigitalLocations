@@ -2,6 +2,7 @@
 
 #include "framework/nodes/environment_3d.h"
 #include "framework/nodes/camera.h"
+#include "framework/nodes/mesh_instance_3d.h"
 #include "framework/parsers/parse_scene.h"
 #include "framework/camera/camera.h"
 #include "framework/camera/camera_3d.h"
@@ -9,10 +10,15 @@
 
 #include "graphics/sample_renderer.h"
 #include "graphics/renderer_storage.h"
+#include "graphics/texture.h"
 
 #include "glm/gtx/quaternion.hpp"
 
 #include "engine/scene.h"
+
+#include "spdlog/spdlog.h"
+
+#include "zmq.h"
 
 #include "shaders/mesh_grid.wgsl.gen.h"
 
@@ -57,16 +63,110 @@ int SampleEngine::post_initialize()
         main_scene->add_node(grid);
     }
 
+    //load_glb("data/ContainerCity.glb");
+
+    // VPET connection
+    {
+        vpet.context = zmq_ctx_new();
+
+        // Handles scene distribution
+        vpet.distributor = zmq_socket(vpet.context, ZMQ_REP);
+        int rc = zmq_bind(vpet.distributor, "tcp://127.0.0.1:5565");
+        assert(rc == 0);
+
+        // Handles scene updates
+        vpet.subscriber = zmq_socket(vpet.context, ZMQ_SUB);
+        rc = zmq_connect(vpet.subscriber, "tcp://127.0.0.1:5557");
+        zmq_setsockopt(vpet.subscriber, ZMQ_SUBSCRIBE, "", 0);
+        int opt_val = 1;
+        zmq_setsockopt(vpet.subscriber, ZMQ_RCVTIMEO, &opt_val, sizeof(int));
+
+        assert(rc == 0);
+
+        // To avoid blocking waiting for messages
+        vpet.poller = zmq_poller_new();
+    }
+
     return 0;
 }
 
 void SampleEngine::clean()
 {
     Engine::clean();
+
+    zmq_close(vpet.distributor);
+    zmq_close(vpet.subscriber);
+    zmq_ctx_destroy(vpet.context);
+}
+
+void SampleEngine::process_vpet_msg()
+{
+    // Check if any message is received
+    zmq_pollitem_t item;
+    item.socket = vpet.distributor;
+    item.fd = 0;
+    item.events = ZMQ_POLLIN;
+
+    int rc = zmq_poll(&item, 1, 0);
+
+    if (rc > 0 && item.revents != 0) {
+        // If so check message type and send data
+        spdlog::info("Messsage received...");
+
+        char buffer[64];
+        std::string buffer_str;
+        int msg_size = zmq_recv(vpet.distributor, buffer, 64, 0);
+        buffer_str.reserve(msg_size);
+        buffer_str.assign(buffer, msg_size);
+
+        spdlog::info("Requested: {}", buffer_str);
+
+        if (buffer_str == "header") {
+            sVPETHeader header = {};
+            zmq_send(vpet.distributor, &header, sizeof(sVPETHeader), 0);
+        } else
+        if (buffer_str == "materials") {
+            zmq_send(vpet.distributor, nullptr, 0, 0);
+        } else
+        if (buffer_str == "textures") {
+
+            for (const sVPETTexture& vpet_texture : vpet.textures) {
+
+
+
+            }
+
+            zmq_send(vpet.distributor, vpet.textures.data(), vpet.textures.size() * sizeof(sVPETTexture), 0);
+        } else
+        if (buffer_str == "objects") { // meshes
+            zmq_send(vpet.distributor, nullptr, 0, 0);
+        } else
+        if (buffer_str == "nodes") {
+            zmq_send(vpet.distributor, nullptr, 0, 0);
+        } else
+        if (buffer_str == "characters") {
+            zmq_send(vpet.distributor, nullptr, 0, 0);
+        }
+    }
+
+    {
+        std::string buffer_str;
+        char buffer[64];
+        int msg_size = zmq_recv(vpet.subscriber, buffer, 64, 0/*ZMQ_DONTWAIT*/);
+
+        if (msg_size > 0) {
+            buffer_str.reserve(msg_size);
+            buffer_str.assign(buffer, msg_size);
+            spdlog::info("Update: {}", buffer_str);
+        }
+    }
+
 }
 
 void SampleEngine::update(float delta_time)
 {
+    process_vpet_msg();
+
     std::vector<Node*>& scene_nodes = main_scene->get_nodes();
 
     if (rotate_scene) {
@@ -148,7 +248,7 @@ std::vector<std::string> SampleEngine::load_glb(const std::string& filename)
     main_scene->delete_all();
 
     std::vector<Node*> entities;
-    parse_scene(filename.c_str(), entities);
+    parse_scene(filename.c_str(), entities, true);
 
     main_scene->add_nodes(entities);
 
@@ -158,6 +258,21 @@ std::vector<std::string> SampleEngine::load_glb(const std::string& filename)
         EntityCamera* new_camera = dynamic_cast<EntityCamera*>(node);
         if (new_camera) {
             cameras.push_back(new_camera);
+        }
+
+        MeshInstance3D* mesh_instance = dynamic_cast<MeshInstance3D*>(node);
+        if (mesh_instance) {
+            for (Surface* surface : mesh_instance->get_surfaces()) {
+                Texture* diffuse_texture = surface->get_material()->get_diffuse_texture();
+
+                if (diffuse_texture) {
+                    //vpet.textures.push_back({
+                    //    diffuse_texture->get_name(),
+                    //    diffuse_texture->get_width() * diffuse_texture->get_height(),
+                    //    diffuse_texture->get_texture_data()
+                    //});
+                }
+            }
         }
 
         if (!node->get_children().empty()) {

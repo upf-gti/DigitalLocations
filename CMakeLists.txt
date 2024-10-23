@@ -44,6 +44,7 @@ endmacro()
 GTI_FABW_DEMO_SOURCES_APPEND(${GTI_FABW_DEMO_DIR_SOURCES})
 GTI_FABW_DEMO_SOURCES_APPEND(${GTI_FABW_DEMO_DIR_SOURCES}/engine)
 GTI_FABW_DEMO_SOURCES_APPEND(${GTI_FABW_DEMO_DIR_SOURCES}/graphics)
+GTI_FABW_DEMO_SOURCES_APPEND(${GTI_FABW_DEMO_DIR_SOURCES}/vpet)
 
 add_executable(${PROJECT_NAME} ${GTI_FABW_DEMO_SOURCES})
 
@@ -132,6 +133,14 @@ endif()
 # wgpuEngine
 add_subdirectory(libraries/wgpuEngine)
 target_link_libraries(${PROJECT_NAME} webgpuEngine)
+
+# libzmq
+set(BUILD_SHARED OFF)
+set(ENABLE_CLANG OFF)
+set(BUILD_TESTS OFF)
+add_subdirectory(libraries/libzmq)
+target_link_libraries(${PROJECT_NAME} libzmq-static)
+set_property(TARGET libzmq-static PROPERTY FOLDER "External/libzmq")
 
 # vulkan
 include_directories(${Vulkan_INCLUDE_DIR})

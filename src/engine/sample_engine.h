@@ -6,6 +6,8 @@
 
 #include "framework/math/math_utils.h"
 
+#include "vpet/structs.h"
+
 #include <string>
 #include <vector>
 
@@ -26,10 +28,22 @@ class SampleEngine : public Engine {
     std::vector<EntityCamera*> cameras;
     bool rotate_scene = false;
 
+    struct sVPET {
+        void* context;
+        void* distributor; // to send scene
+        void* subscriber; // to sync scene
+        void* poller; // to avoid blocking checking for messages
+
+        std::vector<sVPETMesh> meshes;
+        std::vector<sVPETTexture> textures;
+    } vpet;
+
 public:
 
     int initialize(Renderer* renderer, sEngineConfiguration configuration = {}) override;
     int post_initialize() override;
+
+    void process_vpet_msg();
 
     void clean() override;
 
