@@ -76,7 +76,7 @@ int SampleEngine::post_initialize()
 
         // Handles scene updates
         vpet.subscriber = zmq_socket(vpet.context, ZMQ_SUB);
-        rc = zmq_connect(vpet.subscriber, "tcp://127.0.0.1:5557");
+        rc = zmq_connect(vpet.subscriber, "tcp://127.0.0.1:5556");
         zmq_setsockopt(vpet.subscriber, ZMQ_SUBSCRIBE, "", 0);
         int opt_val = 1;
         zmq_setsockopt(vpet.subscriber, ZMQ_RCVTIMEO, &opt_val, sizeof(int));
@@ -150,14 +150,33 @@ void SampleEngine::process_vpet_msg()
     }
 
     {
-        std::string buffer_str;
         char buffer[64];
         int msg_size = zmq_recv(vpet.subscriber, buffer, 64, 0/*ZMQ_DONTWAIT*/);
 
         if (msg_size > 0) {
-            buffer_str.reserve(msg_size);
-            buffer_str.assign(buffer, msg_size);
-            spdlog::info("Update: {}", buffer_str);
+
+            uint8_t id = buffer[0];
+            uint8_t param_type = buffer[1];
+
+            switch (param_type)
+            {
+            case eVPETUpdateType::POSITION: {
+                glm::vec3 position;
+                memcpy(&position[0], &buffer[6], sizeof(glm::vec3));
+                spdlog::info("New Pos: {}, {}, {}", position.x, position.y, position.z);
+                break;
+            }
+            case eVPETUpdateType::ROTATION: {
+
+                break;
+            }
+            case eVPETUpdateType::SCALE: {
+
+                break;
+            }
+            default:
+                break;
+            }
         }
     }
 

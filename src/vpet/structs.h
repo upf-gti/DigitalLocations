@@ -67,3 +67,28 @@ struct sVPETTexture {
     uint32_t size_color_data_array;
     std::vector<uint8_t> texture_data;
 };
+
+// Update messages
+
+enum eVPETUpdateType {
+    POSITION,
+    ROTATION,
+    SCALE
+};
+
+//struct sVPETUpdate {
+//    uint8_t id;
+//    uint8_t param_type;
+//};
+//
+//struct sVPETUpdatePos : public sVPETUpdate {
+//    glm::vec3 position;
+//};
+//
+//struct sVPETUpdateRot : public sVPETUpdate {
+//    glm::quat rotation;
+//};
+//
+//struct sVPETUpdateScale : public sVPETUpdate {
+//    glm::vec3 scale;
+//};
