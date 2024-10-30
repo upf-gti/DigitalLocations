@@ -133,7 +133,6 @@ void SampleEngine::process_vpet_msg()
             for (const sVPETTexture& vpet_texture : vpet.textures) {
 
 
-
             }
 
             zmq_send(vpet.distributor, vpet.textures.data(), vpet.textures.size() * sizeof(sVPETTexture), 0);
@@ -150,36 +149,87 @@ void SampleEngine::process_vpet_msg()
     }
 
     {
-        char buffer[64];
-        int msg_size = zmq_recv(vpet.subscriber, buffer, 64, 0/*ZMQ_DONTWAIT*/);
+        zmq_msg_t message;
+        zmq_msg_init(&message);
+        zmq_msg_recv(&message, vpet.subscriber, 0);
+
+        uint32_t msg_size = zmq_msg_size(&message);
+        uint8_t* buffer = reinterpret_cast<uint8_t*>(zmq_msg_data(&message));
 
         if (msg_size > 0) {
 
-            uint8_t id = buffer[0];
-            uint8_t param_type = buffer[1];
+            uint32_t buffer_ptr = 0;
 
-            switch (param_type)
-            {
-            case eVPETUpdateType::POSITION: {
-                glm::vec3 position;
-                memcpy(&position[0], &buffer[6], sizeof(glm::vec3));
-                spdlog::info("New Pos: {}, {}, {}", position.x, position.y, position.z);
-                break;
-            }
-            case eVPETUpdateType::ROTATION: {
+            uint8_t client_id = buffer[buffer_ptr];
+            buffer_ptr += sizeof(uint8_t);
 
-                break;
-            }
-            case eVPETUpdateType::SCALE: {
+            uint8_t time = buffer[buffer_ptr];
+            buffer_ptr += sizeof(uint8_t);
 
-                break;
-            }
-            default:
-                break;
+            eVPETMessageType message_type = static_cast<eVPETMessageType>(buffer[buffer_ptr]);
+            buffer_ptr += sizeof(uint8_t);
+
+            //switch (message_type) {
+            //case eVPETMessageType::PARAMETER_UPDATE:
+            //    spdlog::info("MSG: PARAM UPDATE");
+            //    break;
+            //case eVPETMessageType::SYNC:
+            //    spdlog::info("MSG: SYNC");
+            //    break;
+            //default:
+            //    spdlog::info("MSG: {}", static_cast<uint8_t>(message_type));
+            //}
+
+            while (buffer_ptr < msg_size) {
+
+                uint8_t scene_id = buffer[buffer_ptr];
+                buffer_ptr += sizeof(uint8_t);
+
+                uint16_t scene_object_id;
+                memcpy(&scene_object_id, &buffer[buffer_ptr], sizeof(uint16_t));
+                buffer_ptr += sizeof(uint16_t);
+
+                uint16_t parameter_id;
+                memcpy(&parameter_id, &buffer[buffer_ptr], sizeof(uint16_t));
+                buffer_ptr += sizeof(uint16_t);
+
+                eVPETParameterType param_type = static_cast<eVPETParameterType>(buffer[buffer_ptr]);
+                buffer_ptr += sizeof(uint8_t);
+
+                uint32_t param_length = buffer[buffer_ptr];
+                buffer_ptr += sizeof(uint32_t);
+
+                switch (param_type)
+                {
+                case eVPETParameterType::VECTOR2: {
+                    glm::vec2 vector2;
+                    memcpy(&vector2[0], &buffer[buffer_ptr], sizeof(glm::vec2));
+                    //spdlog::info("Vec2: {}, {}", vector2.x, vector2.y);
+                    buffer_ptr += sizeof(glm::vec2);
+                    break;
+                }
+                case eVPETParameterType::VECTOR3: {
+                    glm::vec3 vector3;
+                    memcpy(&vector3[0], &buffer[buffer_ptr], sizeof(glm::vec3));
+                    //spdlog::info("Vec3: {}, {}, {}", vector3.x, vector3.y, vector3.z);
+                    buffer_ptr += sizeof(glm::vec3);
+                    break;
+                }
+                case eVPETParameterType::QUATERNION: {
+                    glm::quat rotation;
+                    memcpy(&rotation[0], &buffer[buffer_ptr], sizeof(glm::quat));
+                    //spdlog::info("Rot: {}, {}, {}, {}", rotation.x, rotation.y, rotation.z, rotation.w);
+                    buffer_ptr += sizeof(glm::quat);
+                    break;
+                }
+                default:
+                    break;
+                }
             }
         }
-    }
 
+        zmq_msg_close(&message);
+    }
 }
 
 void SampleEngine::update(float delta_time)

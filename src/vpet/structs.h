@@ -3,11 +3,11 @@
 #include "glm/glm.hpp"
 #include "glm/gtx/quaternion.hpp"
 
-enum eVPETNodeType {
+enum class eVPETNodeType {
     GROUP, GEO, LIGHT, CAMERA
 };
 
-enum eVPETLightType {
+enum class eVPETLightType {
     SPOT, DIRECTIONAL, POINT, AREA, NONE
 };
 
@@ -35,7 +35,7 @@ struct sVPETGeoNode : public sVPETNode {
 };
 
 struct sVPETLightNode : public sVPETNode {
-    int type = SPOT;
+    eVPETLightType type = eVPETLightType::SPOT;
     float intensity = 1.0f;
     float angle = 60.0f;
     float range = 500.0f;
@@ -70,10 +70,32 @@ struct sVPETTexture {
 
 // Update messages
 
-enum eVPETUpdateType {
-    POSITION,
-    ROTATION,
-    SCALE
+enum class eVPETMessageType : uint8_t {
+    PARAMETER_UPDATE,
+    LOCK,
+    SYNC,
+    PING,
+    RESEND_UPDATE,
+    UNDO_REDO_ADD,
+    RESET_OBJECT,
+    RPC,
+    EMPTY = 255
+};
+
+enum class eVPETParameterType : uint8_t {
+    NONE,
+    ACTION,
+    BOOL,
+    INT,
+    FLOAT,
+    VECTOR2,
+    VECTOR3,
+    VECTOR4,
+    QUATERNION,
+    COLOR,
+    STRING,
+    LIST,
+    UNKNOWN = 100
 };
 
 //struct sVPETUpdate {
