@@ -15,6 +15,7 @@
 #include "glm/gtx/quaternion.hpp"
 
 #include "engine/scene.h"
+#include "vpet/scene_distribution.h"
 
 #include "spdlog/spdlog.h"
 
@@ -67,24 +68,24 @@ int SampleEngine::post_initialize()
 
     // VPET connection
     {
-        vpet.context = zmq_ctx_new();
+        context = zmq_ctx_new();
 
         // Handles scene distribution
-        vpet.distributor = zmq_socket(vpet.context, ZMQ_REP);
-        int rc = zmq_bind(vpet.distributor, "tcp://127.0.0.1:5565");
+        distributor = zmq_socket(context, ZMQ_REP);
+        int rc = zmq_bind(distributor, "tcp://127.0.0.1:5565");
         assert(rc == 0);
 
         // Handles scene updates
-        vpet.subscriber = zmq_socket(vpet.context, ZMQ_SUB);
-        rc = zmq_connect(vpet.subscriber, "tcp://127.0.0.1:5556");
-        zmq_setsockopt(vpet.subscriber, ZMQ_SUBSCRIBE, "", 0);
+        subscriber = zmq_socket(context, ZMQ_SUB);
+        rc = zmq_connect(subscriber, "tcp://127.0.0.1:5556");
+        zmq_setsockopt(subscriber, ZMQ_SUBSCRIBE, "", 0);
         int opt_val = 1;
-        zmq_setsockopt(vpet.subscriber, ZMQ_RCVTIMEO, &opt_val, sizeof(int));
+        zmq_setsockopt(subscriber, ZMQ_RCVTIMEO, &opt_val, sizeof(int));
 
         assert(rc == 0);
 
         // To avoid blocking waiting for messages
-        vpet.poller = zmq_poller_new();
+        poller = zmq_poller_new();
     }
 
     return 0;
@@ -94,16 +95,16 @@ void SampleEngine::clean()
 {
     Engine::clean();
 
-    zmq_close(vpet.distributor);
-    zmq_close(vpet.subscriber);
-    zmq_ctx_destroy(vpet.context);
+    zmq_close(distributor);
+    zmq_close(subscriber);
+    zmq_ctx_destroy(context);
 }
 
 void SampleEngine::process_vpet_msg()
 {
     // Check if any message is received
     zmq_pollitem_t item;
-    item.socket = vpet.distributor;
+    item.socket = distributor;
     item.fd = 0;
     item.events = ZMQ_POLLIN;
 
@@ -115,7 +116,7 @@ void SampleEngine::process_vpet_msg()
 
         char buffer[64];
         std::string buffer_str;
-        int msg_size = zmq_recv(vpet.distributor, buffer, 64, 0);
+        int msg_size = zmq_recv(distributor, buffer, 64, 0);
         buffer_str.reserve(msg_size);
         buffer_str.assign(buffer, msg_size);
 
@@ -123,35 +124,29 @@ void SampleEngine::process_vpet_msg()
 
         if (buffer_str == "header") {
             sVPETHeader header = {};
-            zmq_send(vpet.distributor, &header, sizeof(sVPETHeader), 0);
+            zmq_send(distributor, &header, sizeof(sVPETHeader), 0);
         } else
         if (buffer_str == "materials") {
-            zmq_send(vpet.distributor, nullptr, 0, 0);
+            zmq_send(distributor, nullptr, 0, 0);
         } else
         if (buffer_str == "textures") {
-
-            for (const sVPETTexture& vpet_texture : vpet.textures) {
-
-
-            }
-
-            zmq_send(vpet.distributor, vpet.textures.data(), vpet.textures.size() * sizeof(sVPETTexture), 0);
+            zmq_send(distributor, nullptr, 0, 0);
         } else
         if (buffer_str == "objects") { // meshes
-            zmq_send(vpet.distributor, nullptr, 0, 0);
+            zmq_send(distributor, nullptr, 0, 0);
         } else
         if (buffer_str == "nodes") {
-            zmq_send(vpet.distributor, nullptr, 0, 0);
+            zmq_send(distributor, nullptr, 0, 0);
         } else
         if (buffer_str == "characters") {
-            zmq_send(vpet.distributor, nullptr, 0, 0);
+            zmq_send(distributor, nullptr, 0, 0);
         }
     }
 
     {
         zmq_msg_t message;
         zmq_msg_init(&message);
-        zmq_msg_recv(&message, vpet.subscriber, 0);
+        zmq_msg_recv(&message, subscriber, 0);
 
         uint32_t msg_size = zmq_msg_size(&message);
         uint8_t* buffer = reinterpret_cast<uint8_t*>(zmq_msg_data(&message));
@@ -223,6 +218,7 @@ void SampleEngine::process_vpet_msg()
                     break;
                 }
                 default:
+                    assert(0);
                     break;
                 }
             }
@@ -329,20 +325,7 @@ std::vector<std::string> SampleEngine::load_glb(const std::string& filename)
             cameras.push_back(new_camera);
         }
 
-        MeshInstance3D* mesh_instance = dynamic_cast<MeshInstance3D*>(node);
-        if (mesh_instance) {
-            for (Surface* surface : mesh_instance->get_surfaces()) {
-                Texture* diffuse_texture = surface->get_material()->get_diffuse_texture();
-
-                if (diffuse_texture) {
-                    //vpet.textures.push_back({
-                    //    diffuse_texture->get_name(),
-                    //    diffuse_texture->get_width() * diffuse_texture->get_height(),
-                    //    diffuse_texture->get_texture_data()
-                    //});
-                }
-            }
-        }
+        process_scene_object(vpet, node, 0);
 
         if (!node->get_children().empty()) {
             for (auto child : node->get_children()) {

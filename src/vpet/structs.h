@@ -4,13 +4,12 @@
 #include "glm/gtx/quaternion.hpp"
 
 enum class eVPETNodeType {
-    GROUP, GEO, LIGHT, CAMERA
+    GROUP, GEO, LIGHT, CAMERA, SKINNED_MESH, CHARACTER
 };
 
 enum class eVPETLightType {
     SPOT, DIRECTIONAL, POINT, AREA, NONE
 };
-
 
 struct sVPETHeader {
     float light_intensity_factor = 1.0;
@@ -18,8 +17,9 @@ struct sVPETHeader {
 };
 
 struct sVPETNode {
+    eVPETNodeType node_type;
     bool editable = false;
-    int child_count = 0;
+    uint32_t child_count = 0;
     glm::vec3 position = {};
     glm::vec3 scale = {1, 1, 1};
     glm::quat rotation = { 0.f, 0.f, 0.f, 1.f };
@@ -27,10 +27,8 @@ struct sVPETNode {
 };
 
 struct sVPETGeoNode : public sVPETNode {
-    int geo_id = -1;
-    int texture_id = -1;
-    int material_id = -1; // maybe optional??
-    float roughness = 1.0f;
+    uint32_t geo_id = -1;
+    uint32_t material_id = -1;
     glm::vec3 color = { 1.0f, 1.0f, 1.0f };
 };
 
@@ -50,22 +48,51 @@ struct sVPETCamNode : public sVPETNode {
 };
 
 struct sVPETMesh {
-    int number_vertices;
-    int number_indices;
-    int number_normals;
-    int number_uvs;
-    std::vector<float> vertex_array;
+    std::string name;
+    uint32_t number_vertices;
+    uint32_t number_indices;
+    uint32_t number_normals;
+    uint32_t number_uvs;
+    std::vector<glm::vec3> vertex_array;
     std::vector<uint32_t> index_array;
-    std::vector<float> normal_array;
-    std::vector<float> uv_array;
+    std::vector<glm::vec3> normal_array;
+    std::vector<glm::vec2> uv_array;
 };
 
 struct sVPETTexture {
+    std::string name;
     uint32_t texture_width;
     uint32_t texture_height;
     uint32_t format;
-    uint32_t size_color_data_array;
     std::vector<uint8_t> texture_data;
+};
+
+struct sVPETMaterial {
+    uint32_t type = 1;
+    uint32_t name_size;
+    char name[64];
+    uint32_t src_size;
+    char src[64];
+    uint32_t material_id = -1;
+    uint32_t texture_id_size = 0;
+    std::vector<uint32_t> texture_ids;
+    std::vector<glm::vec2> texture_offsets;
+    std::vector<glm::vec2> texture_scales;
+    // Propably skipped
+    uint32_t shader_config_size = 0;
+    std::vector<bool> shader_configs;
+    uint32_t shader_properties_ids_size = 0;
+    std::vector<uint32_t> property_ids;
+    std::vector<uint32_t> property_types;
+    uint32_t shader_properties_data_size = 0;
+    std::vector<uint8_t> property_data;
+};
+
+struct sVPETContext {
+    std::vector<sVPETNode*> node_list;
+    std::vector<sVPETMesh*> geo_list;
+    std::vector<sVPETTexture*> texture_list;
+    std::vector<sVPETMaterial*> material_list;
 };
 
 // Update messages

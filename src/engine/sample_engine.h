@@ -28,15 +28,13 @@ class SampleEngine : public Engine {
     std::vector<EntityCamera*> cameras;
     bool rotate_scene = false;
 
-    struct sVPET {
-        void* context;
-        void* distributor; // to send scene
-        void* subscriber; // to sync scene
-        void* poller; // to avoid blocking checking for messages
+    // Vpet connection
+    void* context;
+    void* distributor; // to send scene
+    void* subscriber; // to sync scene
+    void* poller; // to avoid blocking checking for messages
 
-        std::vector<sVPETMesh> meshes;
-        std::vector<sVPETTexture> textures;
-    } vpet;
+    sVPETContext vpet;
 
 public:
 
