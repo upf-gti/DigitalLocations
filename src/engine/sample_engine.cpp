@@ -72,7 +72,7 @@ int SampleEngine::post_initialize()
 
         // Handles scene distribution
         distributor = zmq_socket(context, ZMQ_REP);
-        int rc = zmq_bind(distributor, "tcp://127.0.0.1:5565");
+        int rc = zmq_bind(distributor, "tcp://127.0.0.1:5555");
         assert(rc == 0);
 
         // Handles scene updates
@@ -120,27 +120,7 @@ void SampleEngine::process_vpet_msg()
         buffer_str.reserve(msg_size);
         buffer_str.assign(buffer, msg_size);
 
-        spdlog::info("Requested: {}", buffer_str);
-
-        if (buffer_str == "header") {
-            sVPETHeader header = {};
-            zmq_send(distributor, &header, sizeof(sVPETHeader), 0);
-        } else
-        if (buffer_str == "materials") {
-            zmq_send(distributor, nullptr, 0, 0);
-        } else
-        if (buffer_str == "textures") {
-            zmq_send(distributor, nullptr, 0, 0);
-        } else
-        if (buffer_str == "objects") { // meshes
-            zmq_send(distributor, nullptr, 0, 0);
-        } else
-        if (buffer_str == "nodes") {
-            zmq_send(distributor, nullptr, 0, 0);
-        } else
-        if (buffer_str == "characters") {
-            zmq_send(distributor, nullptr, 0, 0);
-        }
+        send_scene(distributor, buffer_str, vpet);
     }
 
     {
@@ -175,51 +155,53 @@ void SampleEngine::process_vpet_msg()
             //    spdlog::info("MSG: {}", static_cast<uint8_t>(message_type));
             //}
 
-            while (buffer_ptr < msg_size) {
+            if (message_type == eVPETMessageType::PARAMETER_UPDATE) {
+                while (buffer_ptr < msg_size) {
 
-                uint8_t scene_id = buffer[buffer_ptr];
-                buffer_ptr += sizeof(uint8_t);
+                    uint8_t scene_id = buffer[buffer_ptr];
+                    buffer_ptr += sizeof(uint8_t);
 
-                uint16_t scene_object_id;
-                memcpy(&scene_object_id, &buffer[buffer_ptr], sizeof(uint16_t));
-                buffer_ptr += sizeof(uint16_t);
+                    uint16_t scene_object_id;
+                    memcpy(&scene_object_id, &buffer[buffer_ptr], sizeof(uint16_t));
+                    buffer_ptr += sizeof(uint16_t);
 
-                uint16_t parameter_id;
-                memcpy(&parameter_id, &buffer[buffer_ptr], sizeof(uint16_t));
-                buffer_ptr += sizeof(uint16_t);
+                    uint16_t parameter_id;
+                    memcpy(&parameter_id, &buffer[buffer_ptr], sizeof(uint16_t));
+                    buffer_ptr += sizeof(uint16_t);
 
-                eVPETParameterType param_type = static_cast<eVPETParameterType>(buffer[buffer_ptr]);
-                buffer_ptr += sizeof(uint8_t);
+                    eVPETParameterType param_type = static_cast<eVPETParameterType>(buffer[buffer_ptr]);
+                    buffer_ptr += sizeof(uint8_t);
 
-                uint32_t param_length = buffer[buffer_ptr];
-                buffer_ptr += sizeof(uint32_t);
+                    uint32_t param_length = buffer[buffer_ptr];
+                    buffer_ptr += sizeof(uint32_t);
 
-                switch (param_type)
-                {
-                case eVPETParameterType::VECTOR2: {
-                    glm::vec2 vector2;
-                    memcpy(&vector2[0], &buffer[buffer_ptr], sizeof(glm::vec2));
-                    //spdlog::info("Vec2: {}, {}", vector2.x, vector2.y);
-                    buffer_ptr += sizeof(glm::vec2);
-                    break;
-                }
-                case eVPETParameterType::VECTOR3: {
-                    glm::vec3 vector3;
-                    memcpy(&vector3[0], &buffer[buffer_ptr], sizeof(glm::vec3));
-                    //spdlog::info("Vec3: {}, {}, {}", vector3.x, vector3.y, vector3.z);
-                    buffer_ptr += sizeof(glm::vec3);
-                    break;
-                }
-                case eVPETParameterType::QUATERNION: {
-                    glm::quat rotation;
-                    memcpy(&rotation[0], &buffer[buffer_ptr], sizeof(glm::quat));
-                    //spdlog::info("Rot: {}, {}, {}, {}", rotation.x, rotation.y, rotation.z, rotation.w);
-                    buffer_ptr += sizeof(glm::quat);
-                    break;
-                }
-                default:
-                    assert(0);
-                    break;
+                    switch (param_type)
+                    {
+                    case eVPETParameterType::VECTOR2: {
+                        glm::vec2 vector2;
+                        memcpy(&vector2[0], &buffer[buffer_ptr], sizeof(glm::vec2));
+                        //spdlog::info("Vec2: {}, {}", vector2.x, vector2.y);
+                        buffer_ptr += sizeof(glm::vec2);
+                        break;
+                    }
+                    case eVPETParameterType::VECTOR3: {
+                        glm::vec3 vector3;
+                        memcpy(&vector3[0], &buffer[buffer_ptr], sizeof(glm::vec3));
+                        //spdlog::info("Vec3: {}, {}, {}", vector3.x, vector3.y, vector3.z);
+                        buffer_ptr += sizeof(glm::vec3);
+                        break;
+                    }
+                    case eVPETParameterType::QUATERNION: {
+                        glm::quat rotation;
+                        memcpy(&rotation[0], &buffer[buffer_ptr], sizeof(glm::quat));
+                        //spdlog::info("Rot: {}, {}, {}, {}", rotation.x, rotation.y, rotation.z, rotation.w);
+                        buffer_ptr += sizeof(glm::quat);
+                        break;
+                    }
+                    default:
+                        assert(0);
+                        break;
+                    }
                 }
             }
         }
@@ -318,6 +300,8 @@ std::vector<std::string> SampleEngine::load_glb(const std::string& filename)
     main_scene->add_nodes(entities);
 
     cameras.clear();
+
+    vpet.clean();
 
     std::function<void(Node*)> recurse_tree = [&](Node* node) {
         EntityCamera* new_camera = dynamic_cast<EntityCamera*>(node);
