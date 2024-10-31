@@ -115,6 +115,9 @@ uint32_t process_geo(sVPETContext& vpet, Surface* surface)
 
     vpet.geos_byte_size += sizeof(uint32_t) + surface_data->indices.size() * sizeof(uint32_t);
 
+    // bone weights & bone indices sizes
+    vpet.geos_byte_size += sizeof(uint32_t);
+
     vpet.geo_list.push_back(vpet_mesh);
 
     return vpet.geo_list.size() - 1;
@@ -312,6 +315,10 @@ void send_scene(void* distributor, const std::string& request, sVPETContext& vpe
 
             memcpy(&byte_array[buffer_ptr], mesh->uv_array.data(), uvs_size * sizeof(glm::vec2));
             buffer_ptr += uvs_size * sizeof(glm::vec2);
+
+            uint32_t bone_weights_size = 0;
+            memcpy(&byte_array[buffer_ptr], &bone_weights_size, sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
         }
 
         assert(buffer_ptr == vpet.geos_byte_size);
