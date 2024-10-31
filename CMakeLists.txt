@@ -133,8 +133,10 @@ endif()
 add_subdirectory(libraries/wgpuEngine)
 target_link_libraries(${PROJECT_NAME} webgpuEngine)
 
-# vulkan
-include_directories(${Vulkan_INCLUDE_DIR})
+if (NOT APPLE)
+    # vulkan
+    include_directories(${Vulkan_INCLUDE_DIR})
+endif()
 
 # Enable multicore compile on VS solution
 if(MSVC)
