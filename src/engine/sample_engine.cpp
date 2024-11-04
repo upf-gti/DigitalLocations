@@ -64,8 +64,6 @@ int SampleEngine::post_initialize()
         main_scene->add_node(grid);
     }
 
-    //load_glb("data/ContainerCity.glb");
-
     // VPET connection
     {
         context = zmq_ctx_new();
@@ -309,7 +307,7 @@ std::vector<std::string> SampleEngine::load_glb(const std::string& filename)
             cameras.push_back(new_camera);
         }
 
-        process_scene_object(vpet, node, 0);
+        process_scene_object(vpet, node);
 
         if (!node->get_children().empty()) {
             for (auto child : node->get_children()) {

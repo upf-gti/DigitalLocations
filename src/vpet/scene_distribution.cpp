@@ -27,7 +27,7 @@ uint32_t process_texture(sVPETContext& vpet, Texture* texture)
     vpet_texture->texture_data = texture->get_texture_data();
     vpet_texture->width = texture->get_width();
     vpet_texture->height = texture->get_height();
-    vpet_texture->format = 0;
+    vpet_texture->format = 4; // RGBA32
     vpet_texture->name = name;
 
     vpet.textures_byte_size += 4 * sizeof(uint32_t);
@@ -47,28 +47,47 @@ uint32_t process_material(sVPETContext& vpet, Surface* surface)
     }
 
     sVPETMaterial* vpet_material = new sVPETMaterial();
-    vpet_material->material_id = vpet.material_list.size();
+    vpet_material->type = 1;
+    vpet.materials_byte_size += sizeof(uint32_t);
 
     vpet_material->name_size = material->get_name().size();
+    vpet.materials_byte_size += sizeof(uint32_t);
+
     memcpy(vpet_material->name, material->get_name().data(), std::min(vpet_material->name_size, 64u));
+    vpet.materials_byte_size += vpet_material->name_size;
 
     const char* src = "Standard";
     vpet_material->src_size = strlen(src);
-    memcpy(vpet_material->src, src, std::min(vpet_material->src_size, 64u));
+    vpet.materials_byte_size += sizeof(uint32_t);
 
-    uint32_t texture_id_size = sizeof(uint32_t) + 2 * sizeof(glm::vec2);
+    memcpy(vpet_material->src, src, std::min(vpet_material->src_size, 64u));
+    vpet.materials_byte_size += vpet_material->src_size;
+
+    vpet_material->material_id = vpet.material_list.size();
+    vpet.materials_byte_size += sizeof(uint32_t);
 
     if (material->get_diffuse_texture()) {
+
+        vpet_material->texture_ids_size = 1;
+        vpet.materials_byte_size += sizeof(uint32_t);
+
         vpet_material->texture_id = process_texture(vpet, material->get_diffuse_texture());
+        vpet.materials_byte_size += sizeof(uint32_t);
+
         vpet_material->texture_offset = { 0.0f, 0.0f };
+        vpet.materials_byte_size += sizeof(glm::vec2);
+
         vpet_material->texture_scale = { 1.0f, 1.0f };
-        vpet.materials_byte_size += sizeof(sVPETMaterial);
+        vpet.materials_byte_size += sizeof(glm::vec2);
     }
     else {
-        vpet.materials_byte_size += sizeof(sVPETMaterial) - texture_id_size;
+        vpet_material->texture_ids_size = 0;
+        vpet.materials_byte_size += sizeof(uint32_t);
     }
 
     vpet.material_list.push_back(vpet_material);
+
+    return vpet_material->material_id;
 }
 
 std::string generate_mesh_identifier(Surface* surface)
@@ -99,21 +118,36 @@ uint32_t process_geo(sVPETContext& vpet, Surface* surface)
 
     vpet_mesh->name = name;
 
-    vpet_mesh->vertex_array = surface_data->vertices;
+    // Transform to unity coordinate system
+    vpet_mesh->vertex_array.resize(surface_data->vertices.size());
+    for (uint32_t idx = 0; idx < surface_data->vertices.size(); ++idx) {
+        vpet_mesh->vertex_array[idx] = surface_data->vertices[idx];
+        vpet_mesh->vertex_array[idx].z = -vpet_mesh->vertex_array[idx].z;
+    }
 
-    vpet.geos_byte_size += sizeof(uint32_t) + surface_data->vertices.size() * sizeof(glm::vec3);
+    vpet.geos_byte_size += sizeof(uint32_t) + vpet_mesh->vertex_array.size() * sizeof(glm::vec3);
 
     vpet_mesh->uv_array = surface_data->uvs;
+    vpet.geos_byte_size += sizeof(uint32_t) + vpet_mesh->uv_array.size() * sizeof(glm::vec2);
 
-    vpet.geos_byte_size += sizeof(uint32_t) + surface_data->uvs.size() * sizeof(glm::vec2);
+    // Transform to unity coordinate system
+    vpet_mesh->normal_array.resize(surface_data->normals.size());
+    for (uint32_t idx = 0; idx < surface_data->normals.size(); ++idx) {
+        vpet_mesh->normal_array[idx] = surface_data->normals[idx];
+        vpet_mesh->normal_array[idx].z = -vpet_mesh->normal_array[idx].z;
+    }
 
-    vpet_mesh->normal_array = surface_data->normals;
+    vpet.geos_byte_size += sizeof(uint32_t) + vpet_mesh->normal_array.size() * sizeof(glm::vec3);
 
-    vpet.geos_byte_size += sizeof(uint32_t) + surface_data->normals.size() * sizeof(glm::vec3);
+    // Transform triangle winding after vertex transform
+    vpet_mesh->index_array.resize(surface_data->indices.size());
+    uint32_t add_idx = 0;
+    for (uint32_t idx = surface_data->indices.size(); idx > 0; --idx) {
+        vpet_mesh->index_array[add_idx] = surface_data->indices[idx - 1];
+        add_idx++;
+    }
 
-    vpet_mesh->index_array = surface_data->indices;
-
-    vpet.geos_byte_size += sizeof(uint32_t) + surface_data->indices.size() * sizeof(uint32_t);
+    vpet.geos_byte_size += sizeof(uint32_t) + vpet_mesh->index_array.size() * sizeof(uint32_t);
 
     // bone weights & bone indices sizes
     vpet.geos_byte_size += sizeof(uint32_t);
@@ -123,7 +157,7 @@ uint32_t process_geo(sVPETContext& vpet, Surface* surface)
     return vpet.geo_list.size() - 1;
 }
 
-void add_scene_object(sVPETContext& vpet, sVPETNode* vpet_node, Node* node, uint32_t index)
+void add_scene_object(sVPETContext& vpet, sVPETNode* vpet_node, Node* node)
 {
     Node3D* node_3d = static_cast<Node3D*>(node);
     const Transform& transform = node_3d->get_transform();
@@ -136,19 +170,27 @@ void add_scene_object(sVPETContext& vpet, sVPETNode* vpet_node, Node* node, uint
 
     vpet.nodes_byte_size += 3 * sizeof(float) + 2 * sizeof(glm::vec3) + sizeof(glm::quat);
 
-    memcpy(vpet_node->name, node->get_name().c_str(), std::min(static_cast<uint32_t>(node->get_name().size()), 64u));
+    uint32_t node_name_size = node->get_name().size();
+    memcpy(vpet_node->name, node->get_name().c_str(), std::min(node_name_size, 64u));
     vpet.nodes_byte_size += 64;
 
     vpet.node_list.push_back(vpet_node);
 }
 
-void process_scene_object(sVPETContext& vpet, Node* node, uint32_t index)
+void process_scene_object(sVPETContext& vpet, Node* node)
 {
     MeshInstance3D* mesh_instance = dynamic_cast<MeshInstance3D*>(node);
     if (mesh_instance) {
 
+        sVPETNode* vpet_node = new sVPETNode();
+        add_scene_object(vpet, vpet_node, node);
+
+        int idx = 0;
         // Special case since MeshInstance3D may have several surfaces
         for (Surface* surface : mesh_instance->get_surfaces()) {
+
+            Node3D tmp_node = {};
+            tmp_node.set_name(node->get_name() + "_surface_" + std::to_string(idx));
 
             sVPETGeoNode* geo_node = new sVPETGeoNode();
             geo_node->node_type = eVPETNodeType::GEO;
@@ -156,13 +198,17 @@ void process_scene_object(sVPETContext& vpet, Node* node, uint32_t index)
             geo_node->geo_id = process_geo(vpet, surface);
             geo_node->material_id = process_material(vpet, surface);
 
-            geo_node = geo_node;
             geo_node->editable = true;
 
             vpet.nodes_byte_size += 2 * sizeof(uint32_t) + sizeof(glm::vec4);
 
-            add_scene_object(vpet, geo_node, node, index);
+            add_scene_object(vpet, geo_node, &tmp_node);
+
+            idx++;
         }
+
+        // Surfaces are added as child nodes
+        vpet_node->child_count = mesh_instance->get_surfaces().size();
 
         return;
     }
@@ -199,7 +245,7 @@ void process_scene_object(sVPETContext& vpet, Node* node, uint32_t index)
 
         vpet.nodes_byte_size += 4 * sizeof(uint32_t) + sizeof(glm::vec3);
 
-        add_scene_object(vpet, light_node, node, index);
+        add_scene_object(vpet, light_node, node);
     } else
     if (camera) {
         sVPETCamNode* cam_node = new sVPETCamNode();
@@ -213,11 +259,11 @@ void process_scene_object(sVPETContext& vpet, Node* node, uint32_t index)
 
         vpet.nodes_byte_size += 6 * sizeof(float);
 
-        add_scene_object(vpet, cam_node, node, index);
+        add_scene_object(vpet, cam_node, node);
     }
     else {
         sVPETNode* vpet_node = new sVPETNode();
-        add_scene_object(vpet, vpet_node, node, index);
+        add_scene_object(vpet, vpet_node, node);
     }
 }
 
@@ -236,18 +282,40 @@ void send_scene(void* distributor, const std::string& request, sVPETContext& vpe
 
         byte_array.resize(vpet.materials_byte_size);
 
-        uint32_t texture_id_size = sizeof(uint32_t) + 2 * sizeof(glm::vec2);
         uint32_t buffer_ptr = 0;
 
         for (sVPETMaterial* material : vpet.material_list) {
 
-            if (material->texture_id != -1) {
-                memcpy(&byte_array[buffer_ptr], &material, sizeof(sVPETMaterial));
-                buffer_ptr += sizeof(sVPETMaterial);
-            }
-            else {
-                memcpy(&byte_array[buffer_ptr], &material, sizeof(sVPETMaterial) - texture_id_size);
-                buffer_ptr += sizeof(sVPETMaterial) - texture_id_size;
+            memcpy(&byte_array[buffer_ptr], &material->type, sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
+
+            memcpy(&byte_array[buffer_ptr], &material->name_size, sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
+
+            memcpy(&byte_array[buffer_ptr], &material->name, material->name_size);
+            buffer_ptr += material->name_size;
+
+            memcpy(&byte_array[buffer_ptr], &material->src_size, sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
+
+            memcpy(&byte_array[buffer_ptr], &material->src, material->src_size);
+            buffer_ptr += material->src_size;
+
+            memcpy(&byte_array[buffer_ptr], &material->material_id, sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
+
+            memcpy(&byte_array[buffer_ptr], &material->texture_ids_size, sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
+
+            if (material->texture_ids_size > 0) {
+                memcpy(&byte_array[buffer_ptr], &material->texture_id, sizeof(uint32_t));
+                buffer_ptr += sizeof(uint32_t);
+
+                memcpy(&byte_array[buffer_ptr], &material->texture_offset, sizeof(glm::vec2));
+                buffer_ptr += sizeof(glm::vec2);
+
+                memcpy(&byte_array[buffer_ptr], &material->texture_scale, sizeof(glm::vec2));
+                buffer_ptr += sizeof(glm::vec2);
             }
         }
 
@@ -341,13 +409,18 @@ void send_scene(void* distributor, const std::string& request, sVPETContext& vpe
             memcpy(&byte_array[buffer_ptr], &node->child_count, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&byte_array[buffer_ptr], &node->position, sizeof(glm::vec3));
+            // Transform to unity coordinate system
+            glm::vec3 transformed_pos = node->position;
+            transformed_pos.z = -transformed_pos.z;
+            memcpy(&byte_array[buffer_ptr], &transformed_pos, sizeof(glm::vec3));
             buffer_ptr += sizeof(glm::vec3);
 
             memcpy(&byte_array[buffer_ptr], &node->scale, sizeof(glm::vec3));
             buffer_ptr += sizeof(glm::vec3);
 
-            memcpy(&byte_array[buffer_ptr], &node->rotation, sizeof(glm::quat));
+            glm::quat transformed_rot = node->rotation;
+            transformed_rot.z = -transformed_rot.z;
+            memcpy(&byte_array[buffer_ptr], &transformed_rot, sizeof(glm::quat));
             buffer_ptr += sizeof(glm::quat);
 
             memcpy(&byte_array[buffer_ptr], &node->name, 64);

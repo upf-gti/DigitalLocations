@@ -77,6 +77,7 @@ struct sVPETMaterial {
     char src[64];
     int32_t material_id = -1;
     // We'll assume one texture for now
+    int texture_ids_size = 1;
     int32_t texture_id = -1;
     glm::vec2 texture_offset;
     glm::vec2 texture_scale;
