@@ -73,17 +73,32 @@ int SampleEngine::post_initialize()
     {
         context = zmq_ctx_new();
 
-        // Handles scene distribution
-        distributor = zmq_socket(context, ZMQ_REP);
-        int rc = zmq_bind(distributor, "tcp://127.0.0.1:5555");
-        assert(rc == 0);
+        {
+            // Handles scene distribution
+            distributor = zmq_socket(context, ZMQ_REP);
+            int rc = zmq_bind(distributor, "tcp://127.0.0.1:5555");
+            assert(rc == 0);
 
-        // Handles scene updates
-        subscriber = zmq_socket(context, ZMQ_SUB);
-        rc = zmq_connect(subscriber, "tcp://127.0.0.1:5556");
-        zmq_setsockopt(subscriber, ZMQ_SUBSCRIBE, "", 0);
-        int opt_val = 1;
-        zmq_setsockopt(subscriber, ZMQ_RCVTIMEO, &opt_val, sizeof(int));
+            // Handles scene updates
+            subscriber = zmq_socket(context, ZMQ_SUB);
+            rc = zmq_connect(subscriber, "tcp://127.0.0.1:5556");
+            zmq_setsockopt(subscriber, ZMQ_SUBSCRIBE, "", 0);
+            int opt_val = 1;
+            zmq_setsockopt(subscriber, ZMQ_RCVTIMEO, &opt_val, sizeof(int));
+        }
+
+        // (Using WebSockets)
+        /*{
+            distributor = zmq_socket(context, ZMQ_PUB);
+            int rc = zmq_bind(distributor, "ws://127.0.0.1:5501");
+            assert(rc == 0);
+
+            subscriber = zmq_socket(context, ZMQ_SUB);
+            rc = zmq_bind(subscriber, "ws://127.0.0.1:5502");
+            zmq_setsockopt(subscriber, ZMQ_SUBSCRIBE, "", 0);
+            int opt_val = 1;
+            zmq_setsockopt(subscriber, ZMQ_RCVTIMEO, &opt_val, sizeof(int));
+        }*/
 
         assert(rc == 0);
 
@@ -108,6 +123,32 @@ void SampleEngine::clean()
 }
 
 #ifndef __EMSCRIPTEN__
+
+/*
+// SEND
+{
+    zmq_msg_t message;
+    std::string data = "Hello Javascript!";
+    zmq_send(distributor, data.data(), data.size(), 0);
+}
+
+// RECEIVE
+{
+    zmq_msg_t message;
+    zmq_msg_init(&message);
+    zmq_msg_recv(&message, subscriber, 0);
+    uint32_t msg_size = zmq_msg_size(&message);
+    if (msg_size) {
+        char* buffer = reinterpret_cast<char*>(zmq_msg_data(&message));
+        std::string str(buffer, msg_size);
+        spdlog::info(str);
+    }
+}
+
+std::this_thread::sleep_for(std::chrono::seconds(1));
+
+*/
+
 
 void SampleEngine::process_vpet_msg()
 {

@@ -11,7 +11,7 @@ function _processVector( vector )
 
 window.App = {
 
-    dragSupportedExtensions: [ 'hdr', 'hdre', 'glb', 'ply' ],
+    dragSupportedExtensions: [ /*'hdr'*/, 'glb', 'ply' ],
 
     init() {
 
@@ -38,6 +38,35 @@ window.App = {
                 case 'ply': this.loadLocation.call( this, this._loadPly, this.location ); break;
             }
         }
+
+        /*
+            Receive data
+        */
+
+        const subscriber = new zmq.socket("sub");
+
+        subscriber.subscribe("");
+
+        subscriber.on('message', function( msg ) {
+            let string = new TextDecoder().decode( msg );
+            console.log( string );
+        });
+
+        subscriber.connect("ws://127.0.0.1:5501");
+
+        /*
+            Send data
+        */
+
+        const distributor = new zmq.socket("pub");
+
+        distributor.options.onconnect = () => {
+            console.log("Connected!");
+            // This should be ready to send, but it doesn't seem so...
+            setTimeout( () => distributor.send("Hello C++!"), 500 );
+        };
+
+        distributor.connect("ws://127.0.0.1:5502");
     },
 
     initUI() {
@@ -57,8 +86,7 @@ window.App = {
             if( this.dragSupportedExtensions.indexOf( ext ) == -1 )
                 return;
             switch( ext ) {
-                case 'hdr':
-                case 'hdre': this.loadEnvironment( file ); break;
+                // case 'hdr': this.loadEnvironment( file ); break;
                 case 'glb': this.loadLocation( this._loadGltf, file ); break;
                 case 'ply': this.loadLocation( this._loadPly, file ); break;
             }
@@ -99,9 +127,11 @@ window.App = {
                 // p.addFile( "Load", (data, file) => this.loadGltf( file, data ), { type: 'buffer', local: false, onBeforeRead: onBeforeRead } );
                 p.addCheckbox( "Rotate", false, () => window.engineInstance.toggleSceneRotation() );
             
+                /*
                 p.branch( "Environment", { closed: true } );
                 p.addText( "Name", "", null, { signal: "@environment_name", disabled: true } );
                 p.addFile( "Load", (data, file) => this.loadEnvironment( file, data ), { type: 'buffer', local: false, onBeforeRead: onBeforeRead } );
+                */
 
                 p.branch( "Camera", { closed: true } );
             }
@@ -168,52 +198,52 @@ window.App = {
         window.engineInstance.setCameraLookAtIndex( index );
     },
 
-    parseEnvironment( name, data ) {
+    // parseEnvironment( name, data ) {
 
-        if( data.constructor === File )
-        {
-            const reader = new FileReader();
-            reader.readAsArrayBuffer( data );
-            reader.onload = e => this.parseEnvironment( data.name, e.target.result );
-            return;
-        }
+    //     if( data.constructor === File )
+    //     {
+    //         const reader = new FileReader();
+    //         reader.readAsArrayBuffer( data );
+    //         reader.onload = e => this.parseEnvironment( data.name, e.target.result );
+    //         return;
+    //     }
 
-        setTimeout( () => {
+    //     setTimeout( () => {
 
-            const params = {
+    //         const params = {
 
-                data: data,
-                size: 256,
-                filename: name,
-                oncomplete: () => {
-                    const buffer = HDRTool.getSkybox( name, {  channels: 4 } );
-                    this._loadEnvironment( name.replace( ".hdr", ".hdre" ), buffer );
-                }
-            };
+    //             data: data,
+    //             size: 256,
+    //             filename: name,
+    //             oncomplete: () => {
+    //                 const buffer = HDRTool.getSkybox( name, {  channels: 4 } );
+    //                 this._loadEnvironment( name.replace( ".hdr", ".hdre" ), buffer );
+    //             }
+    //         };
 
-            HDRTool.prefilter( name, params );
+    //         HDRTool.prefilter( name, params );
 
-        }, 150 );
-    },
+    //     }, 150 );
+    // },
 
-    loadEnvironment( file, data ) {
+    // loadEnvironment( file, data ) {
 
-        if( LX.getExtension( file.name ) == 'hdr')
-        {
-            this.parseEnvironment( null, file );
-            return;
-        }
+    //     if( LX.getExtension( file.name ) == 'hdr')
+    //     {
+    //         this.parseEnvironment( null, file );
+    //         return;
+    //     }
 
-        if( !data )
-        {
-            const reader = new FileReader();
-            reader.readAsArrayBuffer( file );
-            reader.onload = e => this._loadEnvironment( file.name, e.target.result );
-            return;
-        }
+    //     if( !data )
+    //     {
+    //         const reader = new FileReader();
+    //         reader.readAsArrayBuffer( file );
+    //         reader.onload = e => this._loadEnvironment( file.name, e.target.result );
+    //         return;
+    //     }
         
-        this._loadEnvironment( file.name, data );
-    },
+    //     this._loadEnvironment( file.name, data );
+    // },
 
     loadLocation( loader, file, data ) {
 
@@ -239,22 +269,22 @@ window.App = {
         loader.call(this, file.name ?? file, data );
     },
 
-    _loadEnvironment( name, buffer ) {
+    // _loadEnvironment( name, buffer ) {
 
-        name = name.substring( name.lastIndexOf( '/' ) );
+    //     name = name.substring( name.lastIndexOf( '/' ) );
 
-        console.log( "Loading " + LX.getExtension( name ).toUpperCase(), [ name, buffer ] );
+    //     console.log( "Loading " + LX.getExtension( name ).toUpperCase(), [ name, buffer ] );
 
-        this._fileStore( name, buffer );
+    //     this._fileStore( name, buffer );
 
-        // This will load the hdre and set texture to the skybox
-        window.engineInstance.setEnvironment( name );
+    //     // This will load the hdre and set texture to the skybox
+    //     window.engineInstance.setEnvironment( name );
 
-        this.toggleModal( false );
+    //     this.toggleModal( false );
 
-        // Update UI
-        LX.emit( '@environment_name', name.replace( /.hdre|.hdr/, "" ) );
-    },
+    //     // Update UI
+    //     LX.emit( '@environment_name', name.replace( /.hdre|.hdr/, "" ) );
+    // },
 
     _loadGltf( name, buffer ) {
 
