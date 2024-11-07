@@ -8,8 +8,13 @@
 #include <emscripten/html5.h>
 #include <emscripten/bind.h>
 
+#include "vpet/scene_distribution.h"
+
 // Binding code
 EMSCRIPTEN_BINDINGS(_Class_) {
+
+    emscripten::class_<sVPETContext>("sVPETContext");
+
     emscripten::class_<SampleEngine>("Engine")
         .constructor<>()
         .function("setEnvironment", &SampleEngine::set_skybox_texture)
@@ -20,10 +25,16 @@ EMSCRIPTEN_BINDINGS(_Class_) {
         .function("setCameraLookAtIndex", &SampleEngine::set_camera_lookat_index)
         .function("setCameraSpeed", &SampleEngine::set_camera_speed)
         .function("resetCamera", &SampleEngine::reset_camera)
-        .function("toggleSceneRotation", &SampleEngine::toggle_rotation);
+        .function("toggleSceneRotation", &SampleEngine::toggle_rotation)
+        .function("getVPETContext", &SampleEngine::get_vpet_context);
 
     emscripten::register_vector<std::string>("vector<string>");
 }
+
+EMSCRIPTEN_BINDINGS(exported_funcs) {
+    emscripten::function("get_scene_request_buffer", &get_scene_request_buffer, emscripten::allow_raw_pointers());
+}
+
 #endif
 
 int main()

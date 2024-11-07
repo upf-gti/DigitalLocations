@@ -19,4 +19,4 @@ void add_scene_object(sVPETContext& vpet, sVPETNode* vpet_node, Node* node, uint
 
 void process_scene_object(sVPETContext& vpet, Node* node);
 
-void send_scene(void* distributor, const std::string& request, sVPETContext& vpet);
+uint32_t get_scene_request_buffer(void* distributor, const std::string& request, sVPETContext& vpet, uint8_t** byte_array);

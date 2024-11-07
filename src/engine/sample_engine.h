@@ -41,7 +41,9 @@ public:
     int initialize(Renderer* renderer, sEngineConfiguration configuration = {}) override;
     int post_initialize() override;
 
+#ifndef __EMSCRIPTEN__
     void process_vpet_msg();
+#endif
 
     void clean() override;
 
@@ -49,6 +51,8 @@ public:
 
     void update(float delta_time) override;
     void render() override;
+
+    sVPETContext& get_vpet_context() { return vpet; }
 
     // Methods to use in web demonstrator
     void set_skybox_texture(const std::string& filename);

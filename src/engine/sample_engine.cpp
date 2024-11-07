@@ -19,7 +19,9 @@
 
 #include "spdlog/spdlog.h"
 
+#ifndef __EMSCRIPTEN__
 #include "zmq.h"
+#endif
 
 #include "shaders/mesh_grid.wgsl.gen.h"
 
@@ -64,6 +66,9 @@ int SampleEngine::post_initialize()
         main_scene->add_node(grid);
     }
 
+    load_glb("data/ContainerCity.glb");
+
+#ifndef __EMSCRIPTEN__
     // VPET connection
     {
         context = zmq_ctx_new();
@@ -85,6 +90,7 @@ int SampleEngine::post_initialize()
         // To avoid blocking waiting for messages
         poller = zmq_poller_new();
     }
+#endif
 
     return 0;
 }
@@ -93,10 +99,15 @@ void SampleEngine::clean()
 {
     Engine::clean();
 
+#ifndef __EMSCRIPTEN__
     zmq_close(distributor);
     zmq_close(subscriber);
     zmq_ctx_destroy(context);
+#endif
+
 }
+
+#ifndef __EMSCRIPTEN__
 
 void SampleEngine::process_vpet_msg()
 {
@@ -118,7 +129,17 @@ void SampleEngine::process_vpet_msg()
         buffer_str.reserve(msg_size);
         buffer_str.assign(buffer, msg_size);
 
-        send_scene(distributor, buffer_str, vpet);
+        uint8_t* byte_array = nullptr;
+
+        spdlog::info("Requested: {}", buffer_str);
+
+        uint32_t byte_array_size = get_scene_request_buffer(distributor, buffer_str, vpet, &byte_array);
+
+        zmq_send(distributor, byte_array, byte_array_size, 0);
+
+        if (byte_array) {
+            delete byte_array;
+        }
     }
 
     {
@@ -208,9 +229,13 @@ void SampleEngine::process_vpet_msg()
     }
 }
 
+#endif
+
 void SampleEngine::update(float delta_time)
 {
+#ifndef __EMSCRIPTEN__
     process_vpet_msg();
+#endif
 
     std::vector<Node*>& scene_nodes = main_scene->get_nodes();
 

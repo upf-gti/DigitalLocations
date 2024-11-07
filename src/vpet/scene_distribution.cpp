@@ -5,10 +5,6 @@
 #include "framework/nodes/spot_light_3d.h"
 #include "framework/nodes/camera.h"
 
-#include "zmq.h"
-
-#include "spdlog/spdlog.h"
-
 uint32_t process_texture(sVPETContext& vpet, Texture* texture)
 {
     std::string name = texture->get_name();
@@ -183,6 +179,7 @@ void process_scene_object(sVPETContext& vpet, Node* node)
     if (mesh_instance) {
 
         sVPETNode* vpet_node = new sVPETNode();
+        vpet_node->editable = true;
         add_scene_object(vpet, vpet_node, node);
 
         int idx = 0;
@@ -198,7 +195,7 @@ void process_scene_object(sVPETContext& vpet, Node* node)
             geo_node->geo_id = process_geo(vpet, surface);
             geo_node->material_id = process_material(vpet, surface);
 
-            geo_node->editable = true;
+            geo_node->editable = false;
 
             vpet.nodes_byte_size += 2 * sizeof(uint32_t) + sizeof(glm::vec4);
 
@@ -267,54 +264,56 @@ void process_scene_object(sVPETContext& vpet, Node* node)
     }
 }
 
-void send_scene(void* distributor, const std::string& request, sVPETContext& vpet)
+uint32_t get_scene_request_buffer(void* distributor, const std::string& request, sVPETContext& vpet, uint8_t** byte_array)
 {
-    spdlog::info("Requested: {}", request);
-    std::vector<uint8_t> byte_array;
+    uint32_t byte_array_size = 0;
 
     if (request == "header") {
         sVPETHeader header = { .sender_id = 1 };
 
-        byte_array.resize(sizeof(sVPETHeader));
-        memcpy(&byte_array[0], &header, sizeof(sVPETHeader));
+        byte_array_size = sizeof(sVPETHeader);
+        *byte_array = new uint8_t[byte_array_size];
+
+        memcpy(&(*byte_array)[0], &header, sizeof(sVPETHeader));
     } else
     if (request == "materials") {
 
-        byte_array.resize(vpet.materials_byte_size);
+        byte_array_size = vpet.materials_byte_size;
+        *byte_array = new uint8_t[byte_array_size];
 
         uint32_t buffer_ptr = 0;
 
         for (sVPETMaterial* material : vpet.material_list) {
 
-            memcpy(&byte_array[buffer_ptr], &material->type, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &material->type, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&byte_array[buffer_ptr], &material->name_size, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &material->name_size, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&byte_array[buffer_ptr], &material->name, material->name_size);
+            memcpy(&(*byte_array)[buffer_ptr], &material->name, material->name_size);
             buffer_ptr += material->name_size;
 
-            memcpy(&byte_array[buffer_ptr], &material->src_size, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &material->src_size, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&byte_array[buffer_ptr], &material->src, material->src_size);
+            memcpy(&(*byte_array)[buffer_ptr], &material->src, material->src_size);
             buffer_ptr += material->src_size;
 
-            memcpy(&byte_array[buffer_ptr], &material->material_id, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &material->material_id, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&byte_array[buffer_ptr], &material->texture_ids_size, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &material->texture_ids_size, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
             if (material->texture_ids_size > 0) {
-                memcpy(&byte_array[buffer_ptr], &material->texture_id, sizeof(uint32_t));
+                memcpy(&(*byte_array)[buffer_ptr], &material->texture_id, sizeof(uint32_t));
                 buffer_ptr += sizeof(uint32_t);
 
-                memcpy(&byte_array[buffer_ptr], &material->texture_offset, sizeof(glm::vec2));
+                memcpy(&(*byte_array)[buffer_ptr], &material->texture_offset, sizeof(glm::vec2));
                 buffer_ptr += sizeof(glm::vec2);
 
-                memcpy(&byte_array[buffer_ptr], &material->texture_scale, sizeof(glm::vec2));
+                memcpy(&(*byte_array)[buffer_ptr], &material->texture_scale, sizeof(glm::vec2));
                 buffer_ptr += sizeof(glm::vec2);
             }
         }
@@ -324,25 +323,26 @@ void send_scene(void* distributor, const std::string& request, sVPETContext& vpe
     } else
     if (request == "textures") {
 
-        byte_array.resize(vpet.textures_byte_size);
+        byte_array_size = vpet.textures_byte_size;
+        *byte_array = new uint8_t[byte_array_size];
 
         uint32_t buffer_ptr = 0;
 
         for (sVPETTexture* texture : vpet.texture_list) {
-            memcpy(&byte_array[buffer_ptr], &texture->width, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &texture->width, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&byte_array[buffer_ptr], &texture->height, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &texture->height, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&byte_array[buffer_ptr], &texture->format, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &texture->format, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
             uint32_t texture_size = texture->texture_data.size();
-            memcpy(&byte_array[buffer_ptr], &texture_size, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &texture_size, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&byte_array[buffer_ptr], texture->texture_data.data(), texture_size);
+            memcpy(&(*byte_array)[buffer_ptr], texture->texture_data.data(), texture_size);
             buffer_ptr += texture_size;
         }
 
@@ -351,41 +351,42 @@ void send_scene(void* distributor, const std::string& request, sVPETContext& vpe
     } else
     if (request == "objects") { // meshes
 
-        byte_array.resize(vpet.geos_byte_size);
+        byte_array_size = vpet.geos_byte_size;
+        *byte_array = new uint8_t[byte_array_size];
 
         uint32_t buffer_ptr = 0;
 
         for (sVPETMesh* mesh : vpet.geo_list) {
             uint32_t vertices_size = mesh->vertex_array.size();
-            memcpy(&byte_array[buffer_ptr], &vertices_size, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &vertices_size, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&byte_array[buffer_ptr], mesh->vertex_array.data(), vertices_size * sizeof(glm::vec3));
+            memcpy(&(*byte_array)[buffer_ptr], mesh->vertex_array.data(), vertices_size * sizeof(glm::vec3));
             buffer_ptr += vertices_size * sizeof(glm::vec3);
 
             uint32_t indices_size = mesh->index_array.size();
-            memcpy(&byte_array[buffer_ptr], &indices_size, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &indices_size, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&byte_array[buffer_ptr], mesh->index_array.data(), indices_size * sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], mesh->index_array.data(), indices_size * sizeof(uint32_t));
             buffer_ptr += indices_size * sizeof(uint32_t);
 
             uint32_t normals_size = mesh->normal_array.size();
-            memcpy(&byte_array[buffer_ptr], &normals_size, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &normals_size, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&byte_array[buffer_ptr], mesh->normal_array.data(), normals_size * sizeof(glm::vec3));
+            memcpy(&(*byte_array)[buffer_ptr], mesh->normal_array.data(), normals_size * sizeof(glm::vec3));
             buffer_ptr += normals_size * sizeof(glm::vec3);
 
             uint32_t uvs_size = mesh->uv_array.size();
-            memcpy(&byte_array[buffer_ptr], &uvs_size, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &uvs_size, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&byte_array[buffer_ptr], mesh->uv_array.data(), uvs_size * sizeof(glm::vec2));
+            memcpy(&(*byte_array)[buffer_ptr], mesh->uv_array.data(), uvs_size * sizeof(glm::vec2));
             buffer_ptr += uvs_size * sizeof(glm::vec2);
 
             uint32_t bone_weights_size = 0;
-            memcpy(&byte_array[buffer_ptr], &bone_weights_size, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &bone_weights_size, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
         }
 
@@ -394,36 +395,39 @@ void send_scene(void* distributor, const std::string& request, sVPETContext& vpe
     } else
     if (request == "nodes") {
 
-        byte_array.resize(vpet.nodes_byte_size);
+        byte_array_size = vpet.nodes_byte_size;
+        *byte_array = new uint8_t[byte_array_size];
+
+        uint32_t a = sizeof(byte_array);
 
         uint32_t buffer_ptr = 0;
 
         for (sVPETNode* node : vpet.node_list) {
 
-            memcpy(&byte_array[buffer_ptr], &node->node_type, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &node->node_type, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&byte_array[buffer_ptr], &node->editable, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &node->editable, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&byte_array[buffer_ptr], &node->child_count, sizeof(uint32_t));
+            memcpy(&(*byte_array)[buffer_ptr], &node->child_count, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
             // Transform to unity coordinate system
             glm::vec3 transformed_pos = node->position;
             transformed_pos.z = -transformed_pos.z;
-            memcpy(&byte_array[buffer_ptr], &transformed_pos, sizeof(glm::vec3));
+            memcpy(&(*byte_array)[buffer_ptr], &transformed_pos, sizeof(glm::vec3));
             buffer_ptr += sizeof(glm::vec3);
 
-            memcpy(&byte_array[buffer_ptr], &node->scale, sizeof(glm::vec3));
+            memcpy(&(*byte_array)[buffer_ptr], &node->scale, sizeof(glm::vec3));
             buffer_ptr += sizeof(glm::vec3);
 
             glm::quat transformed_rot = node->rotation;
             transformed_rot.z = -transformed_rot.z;
-            memcpy(&byte_array[buffer_ptr], &transformed_rot, sizeof(glm::quat));
+            memcpy(&(*byte_array)[buffer_ptr], &transformed_rot, sizeof(glm::quat));
             buffer_ptr += sizeof(glm::quat);
 
-            memcpy(&byte_array[buffer_ptr], &node->name, 64);
+            memcpy(&(*byte_array)[buffer_ptr], &node->name, 64);
             buffer_ptr += 64;
 
             switch (node->node_type)
@@ -432,13 +436,13 @@ void send_scene(void* distributor, const std::string& request, sVPETContext& vpe
 
                 sVPETGeoNode* geo_node = static_cast<sVPETGeoNode*>(node);
 
-                memcpy(&byte_array[buffer_ptr], &geo_node->geo_id, sizeof(uint32_t));
+                memcpy(&(*byte_array)[buffer_ptr], &geo_node->geo_id, sizeof(uint32_t));
                 buffer_ptr += sizeof(uint32_t);
 
-                memcpy(&byte_array[buffer_ptr], &geo_node->material_id, sizeof(uint32_t));
+                memcpy(&(*byte_array)[buffer_ptr], &geo_node->material_id, sizeof(uint32_t));
                 buffer_ptr += sizeof(uint32_t);
 
-                memcpy(&byte_array[buffer_ptr], &geo_node->color, sizeof(glm::vec4));
+                memcpy(&(*byte_array)[buffer_ptr], &geo_node->color, sizeof(glm::vec4));
                 buffer_ptr += sizeof(glm::vec4);
 
                 break;
@@ -447,19 +451,19 @@ void send_scene(void* distributor, const std::string& request, sVPETContext& vpe
 
                 sVPETLightNode* light_node = static_cast<sVPETLightNode*>(node);
 
-                memcpy(&byte_array[buffer_ptr], &light_node->light_type, sizeof(uint32_t));
+                memcpy(&(*byte_array)[buffer_ptr], &light_node->light_type, sizeof(uint32_t));
                 buffer_ptr += sizeof(uint32_t);
 
-                memcpy(&byte_array[buffer_ptr], &light_node->intensity, sizeof(uint32_t));
+                memcpy(&(*byte_array)[buffer_ptr], &light_node->intensity, sizeof(uint32_t));
                 buffer_ptr += sizeof(uint32_t);
 
-                memcpy(&byte_array[buffer_ptr], &light_node->angle, sizeof(float));
+                memcpy(&(*byte_array)[buffer_ptr], &light_node->angle, sizeof(float));
                 buffer_ptr += sizeof(float);
 
-                memcpy(&byte_array[buffer_ptr], &light_node->range, sizeof(float));
+                memcpy(&(*byte_array)[buffer_ptr], &light_node->range, sizeof(float));
                 buffer_ptr += sizeof(float);
 
-                memcpy(&byte_array[buffer_ptr], &light_node->color, sizeof(glm::vec3));
+                memcpy(&(*byte_array)[buffer_ptr], &light_node->color, sizeof(glm::vec3));
                 buffer_ptr += sizeof(glm::vec3);
 
                 break;
@@ -468,22 +472,22 @@ void send_scene(void* distributor, const std::string& request, sVPETContext& vpe
 
                 sVPETCamNode* camera_node = static_cast<sVPETCamNode*>(node);
 
-                memcpy(&byte_array[buffer_ptr], &camera_node->fov, sizeof(float));
+                memcpy(&(*byte_array)[buffer_ptr], &camera_node->fov, sizeof(float));
                 buffer_ptr += sizeof(float);
 
-                memcpy(&byte_array[buffer_ptr], &camera_node->aspect, sizeof(float));
+                memcpy(&(*byte_array)[buffer_ptr], &camera_node->aspect, sizeof(float));
                 buffer_ptr += sizeof(float);
 
-                memcpy(&byte_array[buffer_ptr], &camera_node->near, sizeof(float));
+                memcpy(&(*byte_array)[buffer_ptr], &camera_node->near, sizeof(float));
                 buffer_ptr += sizeof(float);
 
-                memcpy(&byte_array[buffer_ptr], &camera_node->far, sizeof(float));
+                memcpy(&(*byte_array)[buffer_ptr], &camera_node->far, sizeof(float));
                 buffer_ptr += sizeof(float);
 
-                memcpy(&byte_array[buffer_ptr], &camera_node->focal_dist, sizeof(float));
+                memcpy(&(*byte_array)[buffer_ptr], &camera_node->focal_dist, sizeof(float));
                 buffer_ptr += sizeof(float);
 
-                memcpy(&byte_array[buffer_ptr], &camera_node->aperture, sizeof(float));
+                memcpy(&(*byte_array)[buffer_ptr], &camera_node->aperture, sizeof(float));
                 buffer_ptr += sizeof(float);
 
                 break;
@@ -512,10 +516,5 @@ void send_scene(void* distributor, const std::string& request, sVPETContext& vpe
         assert(0);
     }
 
-    if (!byte_array.empty()) {
-        zmq_send(distributor, &byte_array[0], byte_array.size(), 0);
-    }
-    else {
-        zmq_send(distributor, nullptr, 0, 0);
-    }
+    return byte_array_size;
 }

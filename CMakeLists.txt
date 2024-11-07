@@ -134,13 +134,15 @@ endif()
 add_subdirectory(libraries/wgpuEngine)
 target_link_libraries(${PROJECT_NAME} webgpuEngine)
 
-# libzmq
-set(BUILD_SHARED OFF)
-set(ENABLE_CLANG OFF)
-set(BUILD_TESTS OFF)
-add_subdirectory(libraries/libzmq)
-target_link_libraries(${PROJECT_NAME} libzmq-static)
-set_property(TARGET libzmq-static PROPERTY FOLDER "External/libzmq")
+if (NOT EMSCRIPTEN)
+    # libzmq
+    set(BUILD_SHARED OFF)
+    set(ENABLE_CLANG OFF)
+    set(BUILD_TESTS OFF)
+    add_subdirectory(libraries/libzmq)
+    target_link_libraries(${PROJECT_NAME} libzmq-static)
+    set_property(TARGET libzmq-static PROPERTY FOLDER "External/libzmq")
+endif()
 
 # vulkan
 include_directories(${Vulkan_INCLUDE_DIR})
