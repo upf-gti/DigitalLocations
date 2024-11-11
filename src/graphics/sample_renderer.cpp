@@ -6,7 +6,7 @@
 #include "framework/camera/flyover_camera.h"
 #include "framework/camera/orbit_camera.h"
 
-SampleRenderer::SampleRenderer() : Renderer()
+SampleRenderer::SampleRenderer(const sRendererConfiguration& config) : Renderer()
 {
 
 }
