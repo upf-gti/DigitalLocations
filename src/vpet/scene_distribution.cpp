@@ -170,7 +170,13 @@ void add_scene_object(sVPETContext& vpet, sVPETNode* vpet_node, Node* node)
     memcpy(vpet_node->name, node->get_name().c_str(), std::min(node_name_size, 64u));
     vpet.nodes_byte_size += 64;
 
+    vpet_node->node_ref = node_3d;
+
     vpet.node_list.push_back(vpet_node);
+
+    if (vpet_node->editable) {
+        vpet.editables_node_list.push_back(vpet_node);
+    }
 }
 
 void process_scene_object(sVPETContext& vpet, Node* node)
@@ -179,7 +185,6 @@ void process_scene_object(sVPETContext& vpet, Node* node)
     if (mesh_instance) {
 
         sVPETNode* vpet_node = new sVPETNode();
-        vpet_node->editable = true;
         add_scene_object(vpet, vpet_node, node);
 
         int idx = 0;
@@ -260,6 +265,7 @@ void process_scene_object(sVPETContext& vpet, Node* node)
     }
     else {
         sVPETNode* vpet_node = new sVPETNode();
+        vpet_node->editable = true;
         add_scene_object(vpet, vpet_node, node);
     }
 }

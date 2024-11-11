@@ -5,6 +5,8 @@
 
 #include <string>
 
+class Node3D;
+
 enum class eVPETNodeType : uint32_t {
     GROUP, GEO, LIGHT, CAMERA, SKINNED_MESH, CHARACTER
 };
@@ -27,6 +29,7 @@ struct sVPETNode {
     glm::vec3 scale = {1, 1, 1};
     glm::quat rotation = { 0.f, 0.f, 0.f, 1.f };
     char name[64] = "";
+    Node3D* node_ref = nullptr;
 };
 
 struct sVPETGeoNode : public sVPETNode {
@@ -96,6 +99,7 @@ struct sVPETContext {
     std::vector<sVPETMesh*> geo_list;
     std::vector<sVPETTexture*> texture_list;
     std::vector<sVPETMaterial*> material_list;
+    std::vector<sVPETNode*> editables_node_list;
 
     uint32_t nodes_byte_size = 0;
     uint32_t geos_byte_size = 0;

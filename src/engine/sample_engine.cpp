@@ -100,8 +100,6 @@ int SampleEngine::post_initialize()
             zmq_setsockopt(subscriber, ZMQ_RCVTIMEO, &opt_val, sizeof(int));
         }*/
 
-        assert(rc == 0);
-
         // To avoid blocking waiting for messages
         poller = zmq_poller_new();
     }
@@ -225,9 +223,13 @@ void SampleEngine::process_vpet_msg()
                     memcpy(&scene_object_id, &buffer[buffer_ptr], sizeof(uint16_t));
                     buffer_ptr += sizeof(uint16_t);
 
+                    scene_object_id--;
+
                     uint16_t parameter_id;
                     memcpy(&parameter_id, &buffer[buffer_ptr], sizeof(uint16_t));
                     buffer_ptr += sizeof(uint16_t);
+
+                    spdlog::info("obj id: {}, param id: {}", scene_object_id, parameter_id);
 
                     eVPETParameterType param_type = static_cast<eVPETParameterType>(buffer[buffer_ptr]);
                     buffer_ptr += sizeof(uint8_t);
@@ -235,32 +237,60 @@ void SampleEngine::process_vpet_msg()
                     uint32_t param_length = buffer[buffer_ptr];
                     buffer_ptr += sizeof(uint32_t);
 
+                    assert(scene_object_id < vpet.node_list.size());
+
+                    Node3D* node_ref = vpet.editables_node_list[scene_object_id]->node_ref;
+
+                    if (!node_ref) {
+                        return;
+                        zmq_msg_close(&message);
+                    }
+
+                    glm::vec2 vector2;
+                    glm::vec3 vector3;
+                    glm::quat rotation;
+
                     switch (param_type)
                     {
                     case eVPETParameterType::VECTOR2: {
-                        glm::vec2 vector2;
                         memcpy(&vector2[0], &buffer[buffer_ptr], sizeof(glm::vec2));
                         //spdlog::info("Vec2: {}, {}", vector2.x, vector2.y);
                         buffer_ptr += sizeof(glm::vec2);
                         break;
                     }
                     case eVPETParameterType::VECTOR3: {
-                        glm::vec3 vector3;
                         memcpy(&vector3[0], &buffer[buffer_ptr], sizeof(glm::vec3));
-                        //spdlog::info("Vec3: {}, {}, {}", vector3.x, vector3.y, vector3.z);
+                        spdlog::info("Vec3: {}, {}, {}", vector3.x, vector3.y, vector3.z);
                         buffer_ptr += sizeof(glm::vec3);
                         break;
                     }
                     case eVPETParameterType::QUATERNION: {
-                        glm::quat rotation;
                         memcpy(&rotation[0], &buffer[buffer_ptr], sizeof(glm::quat));
                         //spdlog::info("Rot: {}, {}, {}, {}", rotation.x, rotation.y, rotation.z, rotation.w);
+                        //rotation = glm::rotate(glm::conjugate(rotation), glm::pi<float>(), glm::vec3(0, 1, 0));
                         buffer_ptr += sizeof(glm::quat);
                         break;
                     }
                     default:
                         assert(0);
                         break;
+                    }
+
+                    switch (parameter_id) {
+                    case 0:
+                        vector3.x = -vector3.x;
+                        node_ref->set_position(vector3);
+                        break;
+                    case 1:
+                        rotation.y = -rotation.y;
+                        rotation.z = -rotation.z;
+                        node_ref->set_rotation(rotation);
+                        break;
+                    case 2:
+                        node_ref->set_scale(vector3);
+                        break;
+                    default:
+                        assert(0);
                     }
                 }
             }
@@ -382,8 +412,13 @@ std::vector<std::string> SampleEngine::load_glb(const std::string& filename)
         }
     };
 
-    // Each time we load entities, get the cameras!
-    for (auto node : main_scene->get_nodes()) {
+    if (main_scene->get_nodes().empty()) {
+        return {};
+    }
+
+    // Each time we load entities, get vpet nodes and the cameras
+    // only parse root children (wgpuEngine adds a root to every parsed gltf, but vpet cameras need to be on top of the tree)
+    for (auto node : main_scene->get_nodes()[0]->get_children()) {
         recurse_tree(node);
     }
 
