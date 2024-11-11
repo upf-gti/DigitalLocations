@@ -4,3 +4,6 @@ build_web/
 .cache/
 .vscode/
 imgui.ini
+.DS_Store
+**/.DS_Store
+.DS_Store

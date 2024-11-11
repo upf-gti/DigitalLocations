@@ -50,11 +50,19 @@ add_executable(${PROJECT_NAME} ${GTI_FABW_DEMO_SOURCES})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${GTI_FABW_DEMO_DIR_SOURCES})
 
-set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1")
-
-set_property(DIRECTORY ${GTI_FABW_DEMO_DIR_ROOT} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
-set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${GTI_FABW_DEMO_DIR_ROOT}")
+
+# OS Dependant project setup
+if(APPLE)
+    set_target_properties(${PROJECT_NAME} PROPERTIES 
+            XCODE_GENERATE_SCHEME TRUE 
+            XCODE_SCHEME_WORKING_DIRECTORY ${GTI_FABW_DEMO_DIR_ROOT})
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+elseif(MSVC)
+    set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1")
+    set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${GTI_FABW_DEMO_DIR_ROOT}")
+    set_property(DIRECTORY ${GTI_FABW_DEMO_DIR_ROOT} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
+endif()
 
 if (MSVC)
     add_compile_options(/Zc:__cplusplus)
@@ -144,8 +152,10 @@ if (NOT EMSCRIPTEN)
     set_property(TARGET libzmq-static PROPERTY FOLDER "External/libzmq")
 endif()
 
-# vulkan
-include_directories(${Vulkan_INCLUDE_DIR})
+if (NOT APPLE)
+    # vulkan
+    include_directories(${Vulkan_INCLUDE_DIR})
+endif()
 
 # Enable multicore compile on VS solution
 if(MSVC)
