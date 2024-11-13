@@ -3,6 +3,7 @@
 #include "framework/nodes/environment_3d.h"
 #include "framework/nodes/camera.h"
 #include "framework/nodes/mesh_instance_3d.h"
+#include "framework/nodes/light_3d.h"
 #include "framework/parsers/parse_scene.h"
 #include "framework/camera/camera.h"
 #include "framework/camera/camera_3d.h"
@@ -229,8 +230,6 @@ void SampleEngine::process_vpet_msg()
                     memcpy(&parameter_id, &buffer[buffer_ptr], sizeof(uint16_t));
                     buffer_ptr += sizeof(uint16_t);
 
-                    spdlog::info("obj id: {}, param id: {}", scene_object_id, parameter_id);
-
                     eVPETParameterType param_type = static_cast<eVPETParameterType>(buffer[buffer_ptr]);
                     buffer_ptr += sizeof(uint8_t);
 
@@ -239,19 +238,27 @@ void SampleEngine::process_vpet_msg()
 
                     assert(scene_object_id < vpet.node_list.size());
 
-                    Node3D* node_ref = vpet.editables_node_list[scene_object_id]->node_ref;
+                    sVPETNode* vpet_node = vpet.editables_node_list[scene_object_id];
+                    Node3D* node_ref = vpet_node->node_ref;
 
                     if (!node_ref) {
                         return;
                         zmq_msg_close(&message);
                     }
 
+                    float f32;
                     glm::vec2 vector2;
                     glm::vec3 vector3;
+                    glm::vec4 vector4;
                     glm::quat rotation;
 
                     switch (param_type)
                     {
+                    case eVPETParameterType::FLOAT: {
+                        memcpy(&f32, &buffer[buffer_ptr], sizeof(float));
+                        buffer_ptr += sizeof(float);
+                        break;
+                    }
                     case eVPETParameterType::VECTOR2: {
                         memcpy(&vector2[0], &buffer[buffer_ptr], sizeof(glm::vec2));
                         //spdlog::info("Vec2: {}, {}", vector2.x, vector2.y);
@@ -260,14 +267,19 @@ void SampleEngine::process_vpet_msg()
                     }
                     case eVPETParameterType::VECTOR3: {
                         memcpy(&vector3[0], &buffer[buffer_ptr], sizeof(glm::vec3));
-                        spdlog::info("Vec3: {}, {}, {}", vector3.x, vector3.y, vector3.z);
+                        //spdlog::info("Vec3: {}, {}, {}", vector3.x, vector3.y, vector3.z);
                         buffer_ptr += sizeof(glm::vec3);
+                        break;
+                    }
+                    case eVPETParameterType::COLOR: {
+                        memcpy(&vector4[0], &buffer[buffer_ptr], sizeof(glm::vec4));
+                        //spdlog::info("Color: {}, {}, {}, {}", vector4.x, vector4.y, vector4.z, vector4.w);
+                        buffer_ptr += sizeof(glm::vec4);
                         break;
                     }
                     case eVPETParameterType::QUATERNION: {
                         memcpy(&rotation[0], &buffer[buffer_ptr], sizeof(glm::quat));
                         //spdlog::info("Rot: {}, {}, {}, {}", rotation.x, rotation.y, rotation.z, rotation.w);
-                        //rotation = glm::rotate(glm::conjugate(rotation), glm::pi<float>(), glm::vec3(0, 1, 0));
                         buffer_ptr += sizeof(glm::quat);
                         break;
                     }
@@ -278,16 +290,34 @@ void SampleEngine::process_vpet_msg()
 
                     switch (parameter_id) {
                     case 0:
-                        vector3.x = -vector3.x;
+                        vector3.z = -vector3.z;
                         node_ref->set_position(vector3);
                         break;
                     case 1:
+                        rotation.x = -rotation.x;
                         rotation.y = -rotation.y;
-                        rotation.z = -rotation.z;
                         node_ref->set_rotation(rotation);
                         break;
                     case 2:
                         node_ref->set_scale(vector3);
+                        break;
+                    case 3:
+                        if (vpet_node->node_type == eVPETNodeType::LIGHT) {
+                            Light3D* light_ref = static_cast<Light3D*>(node_ref);
+                            light_ref->set_color(vector4);
+                        }
+                        break;
+                    case 4:
+                        if (vpet_node->node_type == eVPETNodeType::LIGHT) {
+                            Light3D* light_ref = static_cast<Light3D*>(node_ref);
+                            light_ref->set_intensity(f32);
+                        }
+                        break;
+                    case 5:
+                        if (vpet_node->node_type == eVPETNodeType::LIGHT) {
+                            Light3D* light_ref = static_cast<Light3D*>(node_ref);
+                            light_ref->set_range(f32 * 2.0f);
+                        }
                         break;
                     default:
                         assert(0);
@@ -417,8 +447,7 @@ std::vector<std::string> SampleEngine::load_glb(const std::string& filename)
     }
 
     // Each time we load entities, get vpet nodes and the cameras
-    // only parse root children (wgpuEngine adds a root to every parsed gltf, but vpet cameras need to be on top of the tree)
-    for (auto node : main_scene->get_nodes()[0]->get_children()) {
+    for (auto node : main_scene->get_nodes()) {
         recurse_tree(node);
     }
 

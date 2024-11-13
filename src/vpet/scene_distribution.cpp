@@ -185,6 +185,7 @@ void process_scene_object(sVPETContext& vpet, Node* node)
     if (mesh_instance) {
 
         sVPETNode* vpet_node = new sVPETNode();
+        vpet_node->editable = true;
         add_scene_object(vpet, vpet_node, node);
 
         int idx = 0;
@@ -222,6 +223,8 @@ void process_scene_object(sVPETContext& vpet, Node* node)
         sVPETLightNode* light_node = new sVPETLightNode();
         light_node->node_type = eVPETNodeType::LIGHT;
 
+        light_node->editable = true;
+
         switch (light->get_type()) {
         case LightType::LIGHT_SPOT: {
             light_node->light_type = eVPETLightType::SPOT;
@@ -243,7 +246,7 @@ void process_scene_object(sVPETContext& vpet, Node* node)
 
         light_node->intensity = light->get_intensity();
         light_node->color = light->get_color();
-        light_node->range = light->get_range();
+        light_node->range = light->get_range() * 0.5f;
 
         vpet.nodes_byte_size += 4 * sizeof(uint32_t) + sizeof(glm::vec3);
 
@@ -254,10 +257,12 @@ void process_scene_object(sVPETContext& vpet, Node* node)
 
         cam_node->node_type = eVPETNodeType::CAMERA;
 
-        cam_node->fov = camera->get_fov();
+        cam_node->fov = glm::degrees(camera->get_fov());
         cam_node->aspect = camera->get_aspect();
         cam_node->near = camera->get_near();
         cam_node->far = camera->get_far();
+
+        cam_node->editable = true;
 
         vpet.nodes_byte_size += 6 * sizeof(float);
 
@@ -265,7 +270,6 @@ void process_scene_object(sVPETContext& vpet, Node* node)
     }
     else {
         sVPETNode* vpet_node = new sVPETNode();
-        vpet_node->editable = true;
         add_scene_object(vpet, vpet_node, node);
     }
 }
@@ -429,7 +433,8 @@ uint32_t get_scene_request_buffer(void* distributor, const std::string& request,
             buffer_ptr += sizeof(glm::vec3);
 
             glm::quat transformed_rot = node->rotation;
-            transformed_rot.z = -transformed_rot.z;
+            transformed_rot.x = -transformed_rot.x;
+            transformed_rot.y = -transformed_rot.y;
             memcpy(&(*byte_array)[buffer_ptr], &transformed_rot, sizeof(glm::quat));
             buffer_ptr += sizeof(glm::quat);
 
