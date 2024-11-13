@@ -32,6 +32,7 @@ class SampleEngine : public Engine {
     void* context;
     void* distributor; // to send scene
     void* subscriber; // to sync scene
+    //void* publisher;
     void* poller; // to avoid blocking checking for messages
 
     sVPETContext vpet;

@@ -39,34 +39,37 @@ window.App = {
             }
         }
 
-        /*
-            Receive data
-        */
+        // For scene request
+        {
+            const distributor = new zmq.socket("rep");
 
-        const subscriber = new zmq.socket("sub");
+            distributor.on('message', function( msg ) {
+                let string = new TextDecoder().decode( msg );
+                console.log( string );
+                setTimeout( () => distributor.send("Hello C++, sending scene!"), 1000 );
+            });
 
-        subscriber.subscribe("");
+            distributor.connect("ws://127.0.0.1:5501");
+        }
 
-        subscriber.on('message', function( msg ) {
-            let string = new TextDecoder().decode( msg );
-            console.log( string );
-        });
+        // For scene updates
+        {
+            const subscriber = new zmq.socket("sub");
 
-        subscriber.connect("ws://127.0.0.1:5501");
+            subscriber.subscribe("");
 
-        /*
-            Send data
-        */
+            subscriber.options.onconnect = () => {
+                console.log("Connected!");
+            };
 
-        const distributor = new zmq.socket("pub");
+            subscriber.on('message', function( msg ) {
+                let string = new TextDecoder().decode( msg );
+                console.log( string );
+            });
 
-        distributor.options.onconnect = () => {
-            console.log("Connected!");
-            // This should be ready to send, but it doesn't seem so...
-            setTimeout( () => distributor.send("Hello C++!"), 500 );
-        };
+            subscriber.connect("ws://127.0.0.1:5502");
+        }
 
-        distributor.connect("ws://127.0.0.1:5502");
     },
 
     initUI() {

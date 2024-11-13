@@ -67,7 +67,7 @@ int SampleEngine::post_initialize()
     //    main_scene->add_node(grid);
     //}
 
-    load_glb("data/ContainerCity.glb");
+    //load_glb("data/ContainerCity.glb");
 
 #ifndef __EMSCRIPTEN__
     // VPET connection
@@ -89,17 +89,19 @@ int SampleEngine::post_initialize()
         }
 
         // (Using WebSockets)
-        /*{
-            distributor = zmq_socket(context, ZMQ_PUB);
-            int rc = zmq_bind(distributor, "ws://127.0.0.1:5501");
-            assert(rc == 0);
+        //{
+        //    // Vpet asking requesting scene
+        //    distributor = zmq_socket(context, ZMQ_REQ);
+        //    zmq_bind(distributor, "ws://127.0.0.1:5501");
 
-            subscriber = zmq_socket(context, ZMQ_SUB);
-            rc = zmq_bind(subscriber, "ws://127.0.0.1:5502");
-            zmq_setsockopt(subscriber, ZMQ_SUBSCRIBE, "", 0);
-            int opt_val = 1;
-            zmq_setsockopt(subscriber, ZMQ_RCVTIMEO, &opt_val, sizeof(int));
-        }*/
+        //    zmq_msg_t message;
+        //    std::string data = "Requesting things!";
+        //    zmq_send(distributor, data.data(), data.size(), 0);
+
+        //    // DataHub sending updates
+        //    publisher = zmq_socket(context, ZMQ_PUB);
+        //    zmq_bind(publisher, "ws://127.0.0.1:5502");
+        //}
 
         // To avoid blocking waiting for messages
         poller = zmq_poller_new();
@@ -122,31 +124,6 @@ void SampleEngine::clean()
 }
 
 #ifndef __EMSCRIPTEN__
-
-/*
-// SEND
-{
-    zmq_msg_t message;
-    std::string data = "Hello Javascript!";
-    zmq_send(distributor, data.data(), data.size(), 0);
-}
-
-// RECEIVE
-{
-    zmq_msg_t message;
-    zmq_msg_init(&message);
-    zmq_msg_recv(&message, subscriber, 0);
-    uint32_t msg_size = zmq_msg_size(&message);
-    if (msg_size) {
-        char* buffer = reinterpret_cast<char*>(zmq_msg_data(&message));
-        std::string str(buffer, msg_size);
-        spdlog::info(str);
-    }
-}
-
-std::this_thread::sleep_for(std::chrono::seconds(1));
-
-*/
 
 
 void SampleEngine::process_vpet_msg()
@@ -336,6 +313,26 @@ void SampleEngine::update(float delta_time)
 {
 #ifndef __EMSCRIPTEN__
     process_vpet_msg();
+
+    //// RECEIVE SCENE REQ DATA
+    //{
+    //    zmq_msg_t message;
+    //    zmq_msg_init(&message);
+    //    zmq_msg_recv(&message, distributor, 0);
+    //    uint32_t msg_size = zmq_msg_size(&message);
+    //    if (msg_size) {
+    //        char* buffer = reinterpret_cast<char*>(zmq_msg_data(&message));
+    //        std::string str(buffer, msg_size);
+    //        spdlog::info(str);
+    //    }
+    //}
+
+    //// SEND UPDATES
+    //{
+    //    std::string data = "Scene update!";
+    //    zmq_send(publisher, data.data(), data.size(), 0);
+    //}
+
 #endif
 
     std::vector<Node*>& scene_nodes = main_scene->get_nodes();
