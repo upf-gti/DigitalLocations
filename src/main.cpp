@@ -26,6 +26,11 @@ EMSCRIPTEN_BINDINGS(_Class_) {
         .function("setCameraSpeed", &SampleEngine::set_camera_speed)
         .function("resetCamera", &SampleEngine::reset_camera)
         .function("toggleSceneRotation", &SampleEngine::toggle_rotation)
+        .function("setSceneMeshes", &SampleEngine::set_scene_meshes, emscripten::allow_raw_pointers())
+        .function("setSceneTextures", &SampleEngine::set_scene_textures, emscripten::allow_raw_pointers())
+        .function("setSceneMaterials", &SampleEngine::set_scene_materials, emscripten::allow_raw_pointers())
+        .function("setSceneNodes", &SampleEngine::set_scene_nodes, emscripten::allow_raw_pointers())
+        .function("loadTracerScene", &SampleEngine::load_tracer_scene)
         .function("getVPETContext", &SampleEngine::get_vpet_context);
 
     emscripten::register_vector<std::string>("vector<string>");

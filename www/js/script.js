@@ -28,6 +28,8 @@ window.App = {
 
         this.initUI();
 
+        this.loadedCounter = 0;
+
         if( this.location )
         {
             this.toggleModal( true );
@@ -39,18 +41,74 @@ window.App = {
             }
         }
 
+        LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.materials", ( data, e ) => {
+
+            console.log(e);
+            console.log(data);
+
+            window.engineInstance.setSceneMaterials(data, data.byteLength)
+
+            this.loadedCounter++;
+
+            if (this.loadedCounter == 4) {
+                window.engineInstance.loadTracerScene();
+            }
+        });
+
+        LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.nodes", ( data, e ) => {
+
+            console.log(e);
+            console.log(data);
+
+            window.engineInstance.setSceneNodes(data, data.byteLength)
+
+            this.loadedCounter++;
+
+            if (this.loadedCounter == 4) {
+                window.engineInstance.loadTracerScene();
+            }
+        });
+
+        LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.objects", ( data, e ) => {
+
+            console.log(e);
+            console.log(data);
+
+            window.engineInstance.setSceneMeshes(data, data.byteLength)
+
+            this.loadedCounter++;
+
+            if (this.loadedCounter == 4) {
+                window.engineInstance.loadTracerScene();
+            }
+        } );
+
+        LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.textures", ( data, e ) => {
+
+            console.log(e);
+            console.log(data);
+
+            window.engineInstance.setSceneTextures(data, data.byteLength)
+
+            this.loadedCounter++;
+
+            if (this.loadedCounter == 4) {
+                window.engineInstance.loadTracerScene();
+            }
+        });
+
         // For scene request
-        {
-            const distributor = new zmq.socket("rep");
+        // {
+        //     const distributor = new zmq.socket("rep");
 
-            distributor.on('message', function( msg ) {
-                let string = new TextDecoder().decode( msg );
-                console.log( string );
-                setTimeout( () => distributor.send("Hello C++, sending scene!"), 1000 );
-            });
+        //     distributor.on('message', function( msg ) {
+        //         let string = new TextDecoder().decode( msg );
+        //         console.log( string );
+        //         setTimeout( () => distributor.send("Hello C++, sending scene!"), 1000 );
+        //     });
 
-            distributor.connect("ws://127.0.0.1:5501");
-        }
+        //     distributor.connect("ws://127.0.0.1:5501");
+        // }
 
         // For scene updates
         {

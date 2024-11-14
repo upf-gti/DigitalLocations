@@ -55,6 +55,13 @@ public:
 
     sVPETContext& get_vpet_context() { return vpet; }
 
+    void set_scene_meshes(uint8_t* byte_array, uint32_t array_size);
+    void set_scene_textures(uint8_t* byte_array, uint32_t array_size);
+    void set_scene_materials(uint8_t* byte_array, uint32_t array_size);
+    void set_scene_nodes(uint8_t* byte_array, uint32_t array_size);
+
+    void load_tracer_scene();
+
     // Methods to use in web demonstrator
     void set_skybox_texture(const std::string& filename);
     std::vector<std::string> load_glb(const std::string& filename);
