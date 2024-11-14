@@ -4,6 +4,9 @@
 #include "framework/nodes/camera.h"
 #include "framework/nodes/mesh_instance_3d.h"
 #include "framework/nodes/light_3d.h"
+#include "framework/nodes/spot_light_3d.h"
+#include "framework/nodes/omni_light_3d.h"
+#include "framework/nodes/directional_light_3d.h"
 #include "framework/parsers/parse_scene.h"
 #include "framework/camera/camera.h"
 #include "framework/camera/camera_3d.h"
@@ -633,9 +636,96 @@ void SampleEngine::set_scene_nodes(uint8_t* byte_array, uint32_t array_size)
 
 void SampleEngine::load_tracer_scene()
 {
+    struct sParentStack {
+        Node3D* parent_node = nullptr;
+        uint32_t children_counter = 0;
+        uint32_t children_size = 0;
+    };
 
+    std::vector<sParentStack> parent_stack;
 
+    for (sVPETNode* vpet_node : vpet.node_list) {
 
+        Node3D* engine_node = nullptr;
+
+        switch (vpet_node->node_type) {
+        case eVPETNodeType::GROUP: {
+            engine_node = new Node3D();
+            break;
+        }
+        case eVPETNodeType::GEO: {
+
+            break;
+        }
+        case eVPETNodeType::CAMERA: {
+            EntityCamera* engine_camera = new EntityCamera();
+            sVPETCamNode* vpet_camera = static_cast<sVPETCamNode*>(vpet_node);
+            engine_camera->set_perspective(vpet_camera->fov, vpet_camera->aspect, vpet_camera->near, vpet_camera->far);
+            engine_node = engine_camera;
+            break;
+        }
+        case eVPETNodeType::LIGHT: {
+
+            sVPETLightNode* vpet_light = static_cast<sVPETLightNode*>(vpet_node);
+
+            if (vpet_light->light_type == eVPETLightType::SPOT) {
+                SpotLight3D* spot_entity = new SpotLight3D();
+                spot_entity->set_inner_cone_angle(vpet_light->angle);
+                spot_entity->set_outer_cone_angle(vpet_light->angle);
+                engine_node = spot_entity;
+            } else
+            if (vpet_light->light_type == eVPETLightType::DIRECTIONAL) {
+                DirectionalLight3D* directional_entity = new DirectionalLight3D();
+                engine_node = directional_entity;
+            } else
+            if (vpet_light->light_type == eVPETLightType::POINT) {
+                OmniLight3D* point_entity = new OmniLight3D();
+                engine_node = point_entity;
+            }
+            else {
+                spdlog::error("unsupported tracer light type");
+                assert(0);
+            }
+
+            Light3D* light_node = static_cast<Light3D*>(engine_node);
+            light_node->set_intensity(vpet_light->intensity);
+            light_node->set_color(vpet_light->color);
+            light_node->set_range(vpet_light->range * 2.0f);
+
+            break;
+        }
+        default: {
+            spdlog::error("unsupported tracer node type");
+            assert(0);
+            continue;
+        }
+        }
+
+        engine_node->set_position(vpet_node->position);
+        engine_node->set_rotation(vpet_node->rotation);
+        engine_node->set_scale(vpet_node->scale);
+
+        engine_node->set_name(vpet_node->name);
+
+        sParentStack* parent = nullptr;
+        if (!parent_stack.empty()) {
+            sParentStack& parent = parent_stack.back();
+
+            parent.children_counter++;
+            parent.parent_node->add_child(engine_node);
+
+            if (parent.children_counter == parent.children_size) {
+                parent_stack.pop_back();
+            }
+        }
+        else {
+            main_scene->add_node(engine_node);
+        }
+
+        if (vpet_node->child_count > 0) {
+            parent_stack.push_back({ engine_node, 0, vpet_node->child_count });
+        }
+    }
 }
 
 void SampleEngine::set_skybox_texture(const std::string& filename)
