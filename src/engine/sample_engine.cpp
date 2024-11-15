@@ -414,13 +414,13 @@ extern "C" {
 #endif
     void set_scene_objects(int8_t* byte_array, uint32_t array_size)
     {
-        uint32_t buffer_ptr = 0;
+        uint32_t buffer_ptr = 0u;
 
         while (buffer_ptr < array_size) {
 
             sVPETMesh* mesh = new sVPETMesh();
 
-            uint32_t vertices_size = mesh->vertex_array.size();
+            uint32_t vertices_size = 0u;
             memcpy(&vertices_size, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
@@ -428,7 +428,7 @@ extern "C" {
             memcpy(mesh->vertex_array.data(), &byte_array[buffer_ptr], vertices_size * sizeof(glm::vec3));
             buffer_ptr += vertices_size * sizeof(glm::vec3);
 
-            uint32_t indices_size = mesh->index_array.size();
+            uint32_t indices_size = 0u;
             memcpy(&indices_size, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
@@ -436,7 +436,7 @@ extern "C" {
             memcpy(mesh->index_array.data(), &byte_array[buffer_ptr], indices_size * sizeof(uint32_t));
             buffer_ptr += indices_size * sizeof(uint32_t);
 
-            uint32_t normals_size = mesh->normal_array.size();
+            uint32_t normals_size = 0u;
             memcpy(&normals_size, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
@@ -444,7 +444,7 @@ extern "C" {
             memcpy(mesh->normal_array.data(), &byte_array[buffer_ptr], normals_size * sizeof(glm::vec3));
             buffer_ptr += normals_size * sizeof(glm::vec3);
 
-            uint32_t uvs_size = mesh->uv_array.size();
+            uint32_t uvs_size = 0u;
             memcpy(&uvs_size, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
@@ -452,7 +452,7 @@ extern "C" {
             memcpy(mesh->uv_array.data(), &byte_array[buffer_ptr], uvs_size * sizeof(glm::vec2));
             buffer_ptr += uvs_size * sizeof(glm::vec2);
 
-            uint32_t bone_weights_size = 0;
+            uint32_t bone_weights_size = 0u;
             memcpy(&bone_weights_size, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
@@ -481,7 +481,7 @@ extern "C" {
             memcpy(&texture->format, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            uint32_t texture_size = texture->texture_data.size();
+            uint32_t texture_size = 0u;
             memcpy(&texture_size, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
@@ -501,8 +501,6 @@ extern "C" {
     {
         uint32_t buffer_ptr = 0;
 
-        spdlog::info("sizeof(uint32_t) {}", sizeof(uint32_t));
-
         while (buffer_ptr < array_size) {
 
             sVPETMaterial* material = new sVPETMaterial();
@@ -511,50 +509,57 @@ extern "C" {
 
             memcpy(&material->type, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
-            spdlog::info("B_PTR{} {}", buffer_ptr, material->type);
+            spdlog::info("B_PTR{} type {}", buffer_ptr, material->type);
 
             memcpy(&material->name_size, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
-            spdlog::info("B_PTR{} {}", buffer_ptr, material->name_size);
+            spdlog::info("B_PTR{} name_size {}", buffer_ptr, material->name_size);
 
             memcpy(&material->name, &byte_array[buffer_ptr], material->name_size);
             buffer_ptr += material->name_size;
-            spdlog::info("B_PTR{} {}", buffer_ptr, material->name);
+            spdlog::info("B_PTR{} name {}", buffer_ptr, material->name);
 
             memcpy(&material->src_size, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
-            spdlog::info("B_PTR{} {}", buffer_ptr, material->src_size);
+            spdlog::info("B_PTR{} src_size {}", buffer_ptr, material->src_size);
 
             memcpy(&material->src, &byte_array[buffer_ptr], material->src_size);
             buffer_ptr += material->src_size;
-            spdlog::info("B_PTR{} {}", buffer_ptr, material->src);
+            spdlog::info("B_PTR{} src {}", buffer_ptr, material->src);
 
-            memcpy(&material->material_id, &byte_array[buffer_ptr], sizeof(int32_t));
-            buffer_ptr += sizeof(int32_t);
-            spdlog::info("B_PTR{} {}", buffer_ptr, material->material_id);
+            material->material_id = vpet.material_list.size();// *reinterpret_cast<int32_t*>(buffer_ptr);
+            // memcpy(&material->material_id, &byte_array[buffer_ptr], sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
+            spdlog::info("B_PTR{} material_id {}", buffer_ptr, material->material_id);
 
-            memcpy(&material->texture_ids_size, &byte_array[buffer_ptr], sizeof(int));
-            buffer_ptr += sizeof(int);
-            spdlog::info("B_PTR{} {}", buffer_ptr, material->texture_ids_size);
+            memcpy(&material->texture_ids_size, &byte_array[buffer_ptr], sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
+            spdlog::info("B_PTR{} texture_ids_size {}", buffer_ptr, material->texture_ids_size);
 
-            if (material->texture_ids_size > 0) {
-                memcpy(&material->texture_id, &byte_array[buffer_ptr], sizeof(int32_t));
-                buffer_ptr += sizeof(int32_t);
-                spdlog::info("B_PTR{} {}", buffer_ptr, material->texture_id);
+            material->texture_id.resize(material->texture_ids_size);
+            material->texture_offset.resize(material->texture_ids_size);
+            material->texture_scale.resize(material->texture_ids_size);
 
-                memcpy(&material->texture_offset, &byte_array[buffer_ptr], sizeof(glm::vec2));
+            for (uint32_t i = 0; i < material->texture_ids_size; ++i) {
+                memcpy(&material->texture_id[i], &byte_array[buffer_ptr], sizeof(uint32_t));
+                buffer_ptr += sizeof(uint32_t);
+                spdlog::info("B_PTR{} texture_id {}", buffer_ptr, material->texture_id[i]);
+
+                memcpy(&material->texture_offset[i], &byte_array[buffer_ptr], sizeof(glm::vec2));
                 buffer_ptr += sizeof(glm::vec2);
-                spdlog::info("B_PTR{} {} {}", buffer_ptr, material->texture_offset.x, material->texture_offset.y);
+                spdlog::info("B_PTR{} texture_offset {} {}", buffer_ptr, material->texture_offset[i].x, material->texture_offset[i].y);
 
-                memcpy(&material->texture_scale, &byte_array[buffer_ptr], sizeof(glm::vec2));
+                memcpy(&material->texture_scale[i], &byte_array[buffer_ptr], sizeof(glm::vec2));
                 buffer_ptr += sizeof(glm::vec2);
-                spdlog::info("B_PTR{} {} {}", buffer_ptr, material->texture_scale.x, material->texture_scale.y);
+                spdlog::info("B_PTR{} texture_scale {} {}", buffer_ptr, material->texture_scale[i].x, material->texture_scale[i].y);
             }
 
            /* spdlog::info("{} {} {}", material->name, material->material_id, material->texture_id);
             spdlog::info("buffer {} array_size {}", buffer_ptr, array_size);*/
 
             vpet.material_list.push_back(material);
+
+            return;
         }
 
         if (buffer_ptr != array_size) {
@@ -582,19 +587,22 @@ extern "C" {
             memcpy(&node->child_count, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            // Transform to unity coordinate system
-            glm::vec3 transformed_pos = node->position;
-            transformed_pos.z = -transformed_pos.z;
+            glm::vec3 transformed_pos;
             memcpy(&transformed_pos, &byte_array[buffer_ptr], sizeof(glm::vec3));
+            // Transform to unity coordinate system
+            transformed_pos.z = -transformed_pos.z;
+            node->position = transformed_pos;
             buffer_ptr += sizeof(glm::vec3);
 
             memcpy(&node->scale, &byte_array[buffer_ptr], sizeof(glm::vec3));
             buffer_ptr += sizeof(glm::vec3);
 
-            glm::quat transformed_rot = node->rotation;
+            glm::quat transformed_rot;
+            memcpy(&transformed_rot, &byte_array[buffer_ptr], sizeof(glm::quat));
+            // Transform to unity coordinate system
             transformed_rot.x = -transformed_rot.x;
             transformed_rot.y = -transformed_rot.y;
-            memcpy(&transformed_rot, &byte_array[buffer_ptr], sizeof(glm::quat));
+            node->rotation = transformed_pos;
             buffer_ptr += sizeof(glm::quat);
 
             memcpy(&node->name, &byte_array[buffer_ptr], 64);
@@ -720,7 +728,9 @@ void SampleEngine::load_tracer_scene()
 
             for (uint32_t i = 0u; i < interleaved.size(); ++i) {
                 interleaved[i].position = vpet_mesh->vertex_array[i];
+                interleaved[i].position.z = -interleaved[i].position.z;
                 interleaved[i].normal = vpet_mesh->normal_array[i];
+                interleaved[i].normal.z = -interleaved[i].normal.z;
                 interleaved[i].uv = vpet_mesh->uv_array[i];
             }
 
@@ -746,13 +756,13 @@ void SampleEngine::load_tracer_scene()
 
                 // Texture
                 {
-                    sVPETTexture* vpet_texture = vpet.texture_list[vpet_material->texture_id];
+                    /*sVPETTexture* vpet_texture = vpet.texture_list[vpet_material->texture_id];
                     if (vpet_texture) {
                         Texture* texture = new Texture();
                         texture->set_name(vpet_texture->name);
                         texture->load_from_data(vpet_texture->name, WGPUTextureDimension_2D, vpet_texture->width, vpet_texture->height, 1u, &vpet_texture->texture_data);
                         geo_material->set_diffuse_texture(texture);
-                    }
+                    }*/
                 }
 
                 geo_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, geo_material));

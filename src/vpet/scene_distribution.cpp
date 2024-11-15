@@ -67,14 +67,16 @@ uint32_t process_material(sVPETContext& vpet, Surface* surface)
         vpet_material->texture_ids_size = 1;
         vpet.materials_byte_size += sizeof(uint32_t);
 
-        vpet_material->texture_id = process_texture(vpet, material->get_diffuse_texture());
-        vpet.materials_byte_size += sizeof(uint32_t);
+        for (uint32_t i = 0; i < vpet_material->texture_ids_size; ++i) {
+            vpet_material->texture_id[i] = process_texture(vpet, material->get_diffuse_texture());
+            vpet.materials_byte_size += sizeof(uint32_t);
 
-        vpet_material->texture_offset = { 0.0f, 0.0f };
-        vpet.materials_byte_size += sizeof(glm::vec2);
+            vpet_material->texture_offset[i] = { 0.0f, 0.0f };
+            vpet.materials_byte_size += sizeof(glm::vec2);
 
-        vpet_material->texture_scale = { 1.0f, 1.0f };
-        vpet.materials_byte_size += sizeof(glm::vec2);
+            vpet_material->texture_scale[i] = { 1.0f, 1.0f };
+            vpet.materials_byte_size += sizeof(glm::vec2);
+        }
     }
     else {
         vpet_material->texture_ids_size = 0;
@@ -364,7 +366,7 @@ uint32_t get_scene_request_buffer(void* distributor, const std::string& request,
         byte_array_size = vpet.geos_byte_size;
         *byte_array = new uint8_t[byte_array_size];
 
-        uint32_t buffer_ptr = 0;
+        uint32_t buffer_ptr = 0u;
 
         for (sVPETMesh* mesh : vpet.geo_list) {
             uint32_t vertices_size = mesh->vertex_array.size();
@@ -395,7 +397,7 @@ uint32_t get_scene_request_buffer(void* distributor, const std::string& request,
             memcpy(&(*byte_array)[buffer_ptr], mesh->uv_array.data(), uvs_size * sizeof(glm::vec2));
             buffer_ptr += uvs_size * sizeof(glm::vec2);
 
-            uint32_t bone_weights_size = 0;
+            uint32_t bone_weights_size = 0u;
             memcpy(&(*byte_array)[buffer_ptr], &bone_weights_size, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
         }

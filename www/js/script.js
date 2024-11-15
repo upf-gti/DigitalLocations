@@ -28,8 +28,6 @@ window.App = {
 
         this.initUI();
 
-        this.loadedCounter = 0;
-
         if( this.location )
         {
             this.toggleModal( true );
@@ -41,61 +39,35 @@ window.App = {
             }
         }
 
-        LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.materials", ( data, e ) => {
+        this.loadedCounter = 0;
 
-            console.log(e);
-            console.log(data);
+        const onSuccess = ( data, request ) => {
 
-            window.engineInstance.setSceneMaterials(data, data.byteLength)
+            const array = new Int8Array( data );
+            const byteSize = array.length * array.BYTES_PER_ELEMENT;
+            const ptr = Module._malloc( byteSize );
 
-            this.loadedCounter++;
+            Module.HEAP8.set( array, ptr );
 
-            if (this.loadedCounter == 4) {
-                window.engineInstance.loadTracerScene();
-            }
-        });
+            const url = request.responseURL;
+            const funcName = `set_scene_${ url.substr( url.lastIndexOf( '.' ) + 1 ) }`;
+            const func = Module.cwrap( funcName, "void", [ "number", "number" ] );
 
-        LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.nodes", ( data, e ) => {
+            func( ptr, byteSize );
 
-            console.log(e);
-            console.log(data);
-
-            window.engineInstance.setSceneNodes(data, data.byteLength)
+            Module._free( ptr );
 
             this.loadedCounter++;
 
-            if (this.loadedCounter == 4) {
+            if (this.loadedCounter == 3) {
                 window.engineInstance.loadTracerScene();
             }
-        });
+        };
 
-        LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.objects", ( data, e ) => {
-
-            console.log(e);
-            console.log(data);
-
-            window.engineInstance.setSceneMeshes(data, data.byteLength)
-
-            this.loadedCounter++;
-
-            if (this.loadedCounter == 4) {
-                window.engineInstance.loadTracerScene();
-            }
-        } );
-
-        LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.textures", ( data, e ) => {
-
-            console.log(e);
-            console.log(data);
-
-            window.engineInstance.setSceneTextures(data, data.byteLength)
-
-            this.loadedCounter++;
-
-            if (this.loadedCounter == 4) {
-                window.engineInstance.loadTracerScene();
-            }
-        });
+        // LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.materials", onSuccess );
+        LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.nodes", onSuccess );
+        LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.objects", onSuccess );
+        LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.textures", onSuccess );
 
         // For scene request
         // {
@@ -111,22 +83,22 @@ window.App = {
         // }
 
         // For scene updates
-        {
-            const subscriber = new zmq.socket("sub");
+        // {
+        //     const subscriber = new zmq.socket("sub");
 
-            subscriber.subscribe("");
+        //     subscriber.subscribe("");
 
-            subscriber.options.onconnect = () => {
-                console.log("Connected!");
-            };
+        //     subscriber.options.onconnect = () => {
+        //         console.log("Connected!");
+        //     };
 
-            subscriber.on('message', function( msg ) {
-                let string = new TextDecoder().decode( msg );
-                console.log( string );
-            });
+        //     subscriber.on('message', function( msg ) {
+        //         let string = new TextDecoder().decode( msg );
+        //         console.log( string );
+        //     });
 
-            subscriber.connect("ws://127.0.0.1:5502");
-        }
+        //     subscriber.connect("ws://127.0.0.1:5502");
+        // }
 
     },
 

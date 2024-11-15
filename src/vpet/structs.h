@@ -80,10 +80,10 @@ struct sVPETMaterial {
     char src[64];
     int32_t material_id = -1;
     // We'll assume one texture for now
-    int texture_ids_size = 1;
-    int32_t texture_id = -1;
-    glm::vec2 texture_offset;
-    glm::vec2 texture_scale;
+    uint32_t texture_ids_size = 1;
+    std::vector<int32_t> texture_id;
+    std::vector<glm::vec2> texture_offset;
+    std::vector<glm::vec2> texture_scale;
     // Propably skipped
     //uint32_t shader_config_size = 0;
     //std::vector<bool> shader_configs;
