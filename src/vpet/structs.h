@@ -62,6 +62,8 @@ struct sVPETMesh {
     std::vector<uint32_t> index_array;
     std::vector<glm::vec3> normal_array;
     std::vector<glm::vec2> uv_array;
+    std::vector<glm::vec4> bone_weights_array;
+    std::vector<uint32_t> bone_indices_array;
 };
 
 struct sVPETTexture {
@@ -81,17 +83,18 @@ struct sVPETMaterial {
     int32_t material_id = -1;
     // We'll assume one texture for now
     uint32_t texture_ids_size = 1;
-    std::vector<int32_t> texture_id;
-    std::vector<glm::vec2> texture_offset;
-    std::vector<glm::vec2> texture_scale;
+    std::vector<int32_t> texture_ids;
+    std::vector<glm::vec2> texture_offsets;
+    std::vector<glm::vec2> texture_scales;
     // Propably skipped
-    //uint32_t shader_config_size = 0;
-    //std::vector<bool> shader_configs;
-    //uint32_t shader_properties_ids_size = 0;
-    //std::vector<uint32_t> property_ids;
-    //std::vector<uint32_t> property_types;
-    //uint32_t shader_properties_data_size = 0;
-    //std::vector<uint8_t> property_data;
+    uint32_t shader_config_size = 0;
+    std::vector<bool> shader_configs;
+    uint32_t shader_properties_ids_size = 0;
+    std::vector<uint32_t> shader_property_ids;
+    uint32_t shader_properties_types_size = 0;
+    std::vector<uint32_t> shader_property_types;
+    uint32_t shader_properties_size = 0;
+    std::vector<uint8_t> shader_properties;
 };
 
 struct sVPETContext {
