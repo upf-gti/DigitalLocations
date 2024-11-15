@@ -26,6 +26,8 @@ class SampleEngine : public Engine {
     std::vector<EntityCamera*> cameras;
     bool rotate_scene = false;
 
+    float camera_interp_speed = 1.0f;
+
     // Vpet connection
     void* context;
     void* distributor; // to send scene

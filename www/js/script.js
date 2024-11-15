@@ -18,7 +18,7 @@ window.App = {
         this.cameraTypes = [ "Orbit", "Flyover" ];
         this.cameraNames = [ ];
 
-        this.cameraSpeed = 0.75;
+        this.cameraSpeed = 1.0;
 
         this.urlParams = new URLSearchParams( window.location.search );
 
@@ -39,35 +39,35 @@ window.App = {
             }
         }
 
-        this.loadedCounter = 0;
+        // this.loadedCounter = 0;
 
-        const onSuccess = ( data, request ) => {
+        // const onSuccess = ( data, request ) => {
 
-            const array = new Int8Array( data );
-            const byteSize = array.length * array.BYTES_PER_ELEMENT;
-            const ptr = Module._malloc( byteSize );
+        //     const array = new Int8Array( data );
+        //     const byteSize = array.length * array.BYTES_PER_ELEMENT;
+        //     const ptr = Module._malloc( byteSize );
 
-            Module.HEAP8.set( array, ptr );
+        //     Module.HEAP8.set( array, ptr );
 
-            const url = request.responseURL;
-            const funcName = `set_scene_${ url.substr( url.lastIndexOf( '.' ) + 1 ) }`;
-            const func = Module.cwrap( funcName, "void", [ "number", "number" ] );
+        //     const url = request.responseURL;
+        //     const funcName = `set_scene_${ url.substr( url.lastIndexOf( '.' ) + 1 ) }`;
+        //     const func = Module.cwrap( funcName, "void", [ "number", "number" ] );
 
-            func( ptr, byteSize );
+        //     func( ptr, byteSize );
 
-            Module._free( ptr );
+        //     Module._free( ptr );
 
-            this.loadedCounter++;
+        //     this.loadedCounter++;
 
-            if (this.loadedCounter == 3) {
-                window.engineInstance.loadTracerScene();
-            }
-        };
+        //     if (this.loadedCounter == 3) {
+        //         window.engineInstance.loadTracerScene();
+        //     }
+        // };
 
         // LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.materials", onSuccess );
-        LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.nodes", onSuccess );
-        LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.objects", onSuccess );
-        LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.textures", onSuccess );
+        // LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.nodes", onSuccess );
+        // LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.objects", onSuccess );
+        // LX.requestBinary( "https://emil-xr.eu/dl/DigitalLocation.textures", onSuccess );
 
         // For scene request
         // {
@@ -174,7 +174,7 @@ window.App = {
             }
 
             p.addDropdown( "Type", this.cameraTypes, "Orbit", (value) => this.setCameraType( value ) );
-            p.addNumber( "Speed", this.cameraSpeed, (value) => this.setCameraSpeed( value ), { min: 0.01, max: 8.0, step: 0.1 } );
+            p.addNumber( "Speed", this.cameraSpeed, (value) => this.setCameraSpeed( value ), { min: 0.1, max: 5.0, step: 0.1 } );
             p.addList( "Look at", this.cameraNames, "", (value) => this.lookAtCameraIndexFromName( value ) );
             p.addButton( null, "Reset", () => this.resetCamera() );
         
@@ -343,7 +343,8 @@ window.App = {
 
         if( this.cameraNames.length )
         {
-            this.lookAtCameraIndexFromName( this.cameraNames[ 0 ] );
+            // this.lookAtCameraIndexFromName( this.cameraNames[ 0 ] );
+            this.panel.get( "Look at" ).set(this.cameraNames[ 0 ])
         }
     },
 

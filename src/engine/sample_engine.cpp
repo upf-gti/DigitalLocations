@@ -372,7 +372,7 @@ void SampleEngine::update(float delta_time)
     {
         // Lerp eye
         glm::vec3 new_eye = cameras[target_camera_idx]->get_translation();
-        eye_lerp.value = smooth_damp(eye_lerp.value, new_eye, &eye_lerp.velocity, 0.50f, 20.0f, delta_time);
+        eye_lerp.value = smooth_damp(eye_lerp.value, new_eye, &eye_lerp.velocity, 0.75f / camera_interp_speed, 20.0f, delta_time);
 
         Camera* camera = renderer->get_camera();
         camera->look_at(eye_lerp.value, camera->get_center(), camera->get_up());
@@ -957,6 +957,8 @@ void SampleEngine::set_camera_speed(float value)
 {
     Camera* camera = Renderer::instance->get_camera();
     camera->set_speed(value);
+
+    camera_interp_speed = value;
 }
 
 void SampleEngine::set_camera_lookat_index(int index)
