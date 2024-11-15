@@ -68,13 +68,13 @@ uint32_t process_material(sVPETContext& vpet, Surface* surface)
         vpet.materials_byte_size += sizeof(uint32_t);
 
         for (uint32_t i = 0; i < vpet_material->texture_ids_size; ++i) {
-            vpet_material->texture_id[i] = process_texture(vpet, material->get_diffuse_texture());
+            vpet_material->texture_ids[i] = process_texture(vpet, material->get_diffuse_texture());
             vpet.materials_byte_size += sizeof(uint32_t);
 
-            vpet_material->texture_offset[i] = { 0.0f, 0.0f };
+            vpet_material->texture_offsets[i] = { 0.0f, 0.0f };
             vpet.materials_byte_size += sizeof(glm::vec2);
 
-            vpet_material->texture_scale[i] = { 1.0f, 1.0f };
+            vpet_material->texture_scales[i] = { 1.0f, 1.0f };
             vpet.materials_byte_size += sizeof(glm::vec2);
         }
     }
@@ -319,13 +319,13 @@ uint32_t get_scene_request_buffer(void* distributor, const std::string& request,
             buffer_ptr += sizeof(uint32_t);
 
             if (material->texture_ids_size > 0) {
-                memcpy(&(*byte_array)[buffer_ptr], &material->texture_id, sizeof(uint32_t));
+                memcpy(&(*byte_array)[buffer_ptr], &material->texture_ids, sizeof(uint32_t));
                 buffer_ptr += sizeof(uint32_t);
 
-                memcpy(&(*byte_array)[buffer_ptr], &material->texture_offset, sizeof(glm::vec2));
+                memcpy(&(*byte_array)[buffer_ptr], &material->texture_offsets, sizeof(glm::vec2));
                 buffer_ptr += sizeof(glm::vec2);
 
-                memcpy(&(*byte_array)[buffer_ptr], &material->texture_scale, sizeof(glm::vec2));
+                memcpy(&(*byte_array)[buffer_ptr], &material->texture_scales, sizeof(glm::vec2));
                 buffer_ptr += sizeof(glm::vec2);
             }
         }
@@ -372,34 +372,36 @@ uint32_t get_scene_request_buffer(void* distributor, const std::string& request,
             uint32_t vertices_size = mesh->vertex_array.size();
             memcpy(&(*byte_array)[buffer_ptr], &vertices_size, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
-
             memcpy(&(*byte_array)[buffer_ptr], mesh->vertex_array.data(), vertices_size * sizeof(glm::vec3));
             buffer_ptr += vertices_size * sizeof(glm::vec3);
 
             uint32_t indices_size = mesh->index_array.size();
             memcpy(&(*byte_array)[buffer_ptr], &indices_size, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
-
             memcpy(&(*byte_array)[buffer_ptr], mesh->index_array.data(), indices_size * sizeof(uint32_t));
             buffer_ptr += indices_size * sizeof(uint32_t);
 
             uint32_t normals_size = mesh->normal_array.size();
             memcpy(&(*byte_array)[buffer_ptr], &normals_size, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
-
             memcpy(&(*byte_array)[buffer_ptr], mesh->normal_array.data(), normals_size * sizeof(glm::vec3));
             buffer_ptr += normals_size * sizeof(glm::vec3);
 
             uint32_t uvs_size = mesh->uv_array.size();
             memcpy(&(*byte_array)[buffer_ptr], &uvs_size, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
-
             memcpy(&(*byte_array)[buffer_ptr], mesh->uv_array.data(), uvs_size * sizeof(glm::vec2));
             buffer_ptr += uvs_size * sizeof(glm::vec2);
 
-            uint32_t bone_weights_size = 0u;
+            uint32_t bone_weights_size = mesh->bone_weights_array.size();
             memcpy(&(*byte_array)[buffer_ptr], &bone_weights_size, sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
+            memcpy(&(*byte_array)[buffer_ptr], mesh->bone_weights_array.data(), bone_weights_size * sizeof(glm::vec4));
+            buffer_ptr += bone_weights_size * sizeof(glm::vec4);
+
+            uint32_t bone_indices_size = bone_weights_size;
+            memcpy(&(*byte_array)[buffer_ptr], mesh->bone_indices_array.data(), bone_indices_size * sizeof(uint32_t));
+            buffer_ptr += bone_indices_size * sizeof(uint32_t);
         }
 
         assert(buffer_ptr == vpet.geos_byte_size);
@@ -409,8 +411,6 @@ uint32_t get_scene_request_buffer(void* distributor, const std::string& request,
 
         byte_array_size = vpet.nodes_byte_size;
         *byte_array = new uint8_t[byte_array_size];
-
-        uint32_t a = sizeof(byte_array);
 
         uint32_t buffer_ptr = 0;
 
@@ -467,8 +467,8 @@ uint32_t get_scene_request_buffer(void* distributor, const std::string& request,
                 memcpy(&(*byte_array)[buffer_ptr], &light_node->light_type, sizeof(uint32_t));
                 buffer_ptr += sizeof(uint32_t);
 
-                memcpy(&(*byte_array)[buffer_ptr], &light_node->intensity, sizeof(uint32_t));
-                buffer_ptr += sizeof(uint32_t);
+                memcpy(&(*byte_array)[buffer_ptr], &light_node->intensity, sizeof(float));
+                buffer_ptr += sizeof(float);
 
                 memcpy(&(*byte_array)[buffer_ptr], &light_node->angle, sizeof(float));
                 buffer_ptr += sizeof(float);
