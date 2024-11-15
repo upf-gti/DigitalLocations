@@ -6,8 +6,6 @@
 
 #include "framework/math/math_utils.h"
 
-#include "vpet/structs.h"
-
 #include <string>
 #include <vector>
 
@@ -35,8 +33,6 @@ class SampleEngine : public Engine {
     //void* publisher;
     void* poller; // to avoid blocking checking for messages
 
-    sVPETContext vpet;
-
 public:
 
     int initialize(Renderer* renderer, sEngineConfiguration configuration = {}) override;
@@ -52,13 +48,6 @@ public:
 
     void update(float delta_time) override;
     void render() override;
-
-    sVPETContext& get_vpet_context() { return vpet; }
-
-    void set_scene_meshes(uint8_t* byte_array, uint32_t array_size);
-    void set_scene_textures(uint8_t* byte_array, uint32_t array_size);
-    void set_scene_materials(uint8_t* byte_array, uint32_t array_size);
-    void set_scene_nodes(uint8_t* byte_array, uint32_t array_size);
 
     void load_tracer_scene();
 

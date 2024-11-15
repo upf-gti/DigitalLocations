@@ -27,7 +27,12 @@
 #include "zmq.h"
 #endif
 
+#include "vpet/structs.h"
+
 #include "shaders/mesh_grid.wgsl.gen.h"
+#include "shaders/mesh_forward.wgsl.gen.h"
+
+sVPETContext vpet;
 
 int SampleEngine::initialize(Renderer* renderer, sEngineConfiguration configuration)
 {
@@ -404,235 +409,281 @@ void SampleEngine::render()
 	Engine::render();
 }
 
+#ifdef __EMSCRIPTEN__
+extern "C" {
+#endif
+    void set_scene_objects(int8_t* byte_array, uint32_t array_size)
+    {
+        uint32_t buffer_ptr = 0;
 
-void SampleEngine::set_scene_meshes(uint8_t* byte_array, uint32_t array_size)
-{
-    uint32_t buffer_ptr = 0;
+        while (buffer_ptr < array_size) {
 
-    while (buffer_ptr < array_size) {
+            sVPETMesh* mesh = new sVPETMesh();
 
-        sVPETMesh* mesh = new sVPETMesh();
-
-        uint32_t vertices_size = mesh->vertex_array.size();
-        memcpy(&vertices_size, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        mesh->vertex_array.resize(vertices_size);
-        memcpy(mesh->vertex_array.data(), &byte_array[buffer_ptr], vertices_size * sizeof(glm::vec3));
-        buffer_ptr += vertices_size * sizeof(glm::vec3);
-
-        uint32_t indices_size = mesh->index_array.size();
-        memcpy(&indices_size, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        mesh->index_array.resize(indices_size);
-        memcpy(mesh->index_array.data(), &byte_array[buffer_ptr], indices_size * sizeof(uint32_t));
-        buffer_ptr += indices_size * sizeof(uint32_t);
-
-        uint32_t normals_size = mesh->normal_array.size();
-        memcpy(&normals_size, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        mesh->normal_array.resize(normals_size);
-        memcpy(mesh->normal_array.data(), &byte_array[buffer_ptr], normals_size * sizeof(glm::vec3));
-        buffer_ptr += normals_size * sizeof(glm::vec3);
-
-        uint32_t uvs_size = mesh->uv_array.size();
-        memcpy(&uvs_size, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        mesh->uv_array.resize(uvs_size);
-        memcpy(mesh->uv_array.data(), &byte_array[buffer_ptr], uvs_size * sizeof(glm::vec2));
-        buffer_ptr += uvs_size * sizeof(glm::vec2);
-
-        uint32_t bone_weights_size = 0;
-        memcpy(&bone_weights_size, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-    }
-
-    assert(buffer_ptr == array_size);
-}
-
-void SampleEngine::set_scene_textures(uint8_t* byte_array, uint32_t array_size)
-{
-    uint32_t buffer_ptr = 0;
-
-    while (buffer_ptr < array_size) {
-
-        sVPETTexture* texture = new sVPETTexture();
-
-        memcpy(&texture->width, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        memcpy(&texture->height, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        memcpy(&texture->format, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        uint32_t texture_size = texture->texture_data.size();
-        memcpy(&texture_size, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        memcpy(texture->texture_data.data(), &byte_array[buffer_ptr], texture_size);
-        buffer_ptr += texture_size;
-    }
-
-    assert(buffer_ptr == array_size);
-}
-
-void SampleEngine::set_scene_materials(uint8_t* byte_array, uint32_t array_size)
-{
-    uint32_t buffer_ptr = 0;
-
-    while (buffer_ptr < array_size) {
-
-        sVPETMaterial* material = new sVPETMaterial();
-
-        memcpy(&material->type, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        memcpy(&material->name_size, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        memcpy(&material->name, &byte_array[buffer_ptr], material->name_size);
-        buffer_ptr += material->name_size;
-
-        memcpy(&material->src_size, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        memcpy(&material->src, &byte_array[buffer_ptr], material->src_size);
-        buffer_ptr += material->src_size;
-
-        memcpy(&material->material_id, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        memcpy(&material->texture_ids_size, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        if (material->texture_ids_size > 0) {
-            memcpy(&material->texture_id, &byte_array[buffer_ptr], sizeof(uint32_t));
+            uint32_t vertices_size = mesh->vertex_array.size();
+            memcpy(&vertices_size, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&material->texture_offset, &byte_array[buffer_ptr], sizeof(glm::vec2));
-            buffer_ptr += sizeof(glm::vec2);
+            mesh->vertex_array.resize(vertices_size);
+            memcpy(mesh->vertex_array.data(), &byte_array[buffer_ptr], vertices_size * sizeof(glm::vec3));
+            buffer_ptr += vertices_size * sizeof(glm::vec3);
 
-            memcpy(&material->texture_scale, &byte_array[buffer_ptr], sizeof(glm::vec2));
-            buffer_ptr += sizeof(glm::vec2);
+            uint32_t indices_size = mesh->index_array.size();
+            memcpy(&indices_size, &byte_array[buffer_ptr], sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
+
+            mesh->index_array.resize(indices_size);
+            memcpy(mesh->index_array.data(), &byte_array[buffer_ptr], indices_size * sizeof(uint32_t));
+            buffer_ptr += indices_size * sizeof(uint32_t);
+
+            uint32_t normals_size = mesh->normal_array.size();
+            memcpy(&normals_size, &byte_array[buffer_ptr], sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
+
+            mesh->normal_array.resize(normals_size);
+            memcpy(mesh->normal_array.data(), &byte_array[buffer_ptr], normals_size * sizeof(glm::vec3));
+            buffer_ptr += normals_size * sizeof(glm::vec3);
+
+            uint32_t uvs_size = mesh->uv_array.size();
+            memcpy(&uvs_size, &byte_array[buffer_ptr], sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
+
+            mesh->uv_array.resize(uvs_size);
+            memcpy(mesh->uv_array.data(), &byte_array[buffer_ptr], uvs_size * sizeof(glm::vec2));
+            buffer_ptr += uvs_size * sizeof(glm::vec2);
+
+            uint32_t bone_weights_size = 0;
+            memcpy(&bone_weights_size, &byte_array[buffer_ptr], sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
+
+            vpet.geo_list.push_back(mesh);
         }
+
+        spdlog::info("Meshes: buffer {} array_size {}", buffer_ptr, array_size);
+
+        assert(buffer_ptr == array_size);
     }
 
-    assert(buffer_ptr == vpet.materials_byte_size);
-}
+    void set_scene_textures(int8_t* byte_array, uint32_t array_size)
+    {
+        uint32_t buffer_ptr = 0;
 
-void SampleEngine::set_scene_nodes(uint8_t* byte_array, uint32_t array_size)
-{
-    uint32_t buffer_ptr = 0;
+        while (buffer_ptr < array_size) {
 
-    while (buffer_ptr < array_size) {
+            sVPETTexture* texture = new sVPETTexture();
 
-        sVPETNode* node = new sVPETNode();
-
-        memcpy(&node->node_type, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        memcpy(&node->editable, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        memcpy(&node->child_count, &byte_array[buffer_ptr], sizeof(uint32_t));
-        buffer_ptr += sizeof(uint32_t);
-
-        // Transform to unity coordinate system
-        glm::vec3 transformed_pos = node->position;
-        transformed_pos.z = -transformed_pos.z;
-        memcpy(&transformed_pos, &byte_array[buffer_ptr], sizeof(glm::vec3));
-        buffer_ptr += sizeof(glm::vec3);
-
-        memcpy(&node->scale, &byte_array[buffer_ptr], sizeof(glm::vec3));
-        buffer_ptr += sizeof(glm::vec3);
-
-        glm::quat transformed_rot = node->rotation;
-        transformed_rot.x = -transformed_rot.x;
-        transformed_rot.y = -transformed_rot.y;
-        memcpy(&transformed_rot, &byte_array[buffer_ptr], sizeof(glm::quat));
-        buffer_ptr += sizeof(glm::quat);
-
-        memcpy(&node->name, &byte_array[buffer_ptr], 64);
-        buffer_ptr += 64;
-
-        switch (node->node_type)
-        {
-        case eVPETNodeType::GEO: {
-
-            sVPETGeoNode* geo_node = static_cast<sVPETGeoNode*>(node);
-
-            memcpy(&geo_node->geo_id, &byte_array[buffer_ptr], sizeof(uint32_t));
+            memcpy(&texture->width, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&geo_node->material_id, &byte_array[buffer_ptr], sizeof(uint32_t));
+            memcpy(&texture->height, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&geo_node->color, &byte_array[buffer_ptr], sizeof(glm::vec4));
-            buffer_ptr += sizeof(glm::vec4);
+            memcpy(&texture->format, &byte_array[buffer_ptr], sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
 
-            break;
+            uint32_t texture_size = texture->texture_data.size();
+            memcpy(&texture_size, &byte_array[buffer_ptr], sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
+
+            memcpy(texture->texture_data.data(), &byte_array[buffer_ptr], texture_size);
+            buffer_ptr += texture_size;
+
+            vpet.texture_list.push_back(texture);
         }
-        case eVPETNodeType::LIGHT: {
 
-            sVPETLightNode* light_node = static_cast<sVPETLightNode*>(node);
+        spdlog::info("Textures: buffer {} array_size {}", buffer_ptr, array_size);
 
-            memcpy(&light_node->light_type, &byte_array[buffer_ptr], sizeof(uint32_t));
+
+        assert(buffer_ptr == array_size);
+    }
+
+    void set_scene_materials(int8_t* byte_array, uint32_t array_size)
+    {
+        uint32_t buffer_ptr = 0;
+
+        spdlog::info("sizeof(uint32_t) {}", sizeof(uint32_t));
+
+        while (buffer_ptr < array_size) {
+
+            sVPETMaterial* material = new sVPETMaterial();
+
+            spdlog::info("NEW MATERIAL!");
+
+            memcpy(&material->type, &byte_array[buffer_ptr], sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
+            spdlog::info("B_PTR{} {}", buffer_ptr, material->type);
+
+            memcpy(&material->name_size, &byte_array[buffer_ptr], sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
+            spdlog::info("B_PTR{} {}", buffer_ptr, material->name_size);
+
+            memcpy(&material->name, &byte_array[buffer_ptr], material->name_size);
+            buffer_ptr += material->name_size;
+            spdlog::info("B_PTR{} {}", buffer_ptr, material->name);
+
+            memcpy(&material->src_size, &byte_array[buffer_ptr], sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
+            spdlog::info("B_PTR{} {}", buffer_ptr, material->src_size);
+
+            memcpy(&material->src, &byte_array[buffer_ptr], material->src_size);
+            buffer_ptr += material->src_size;
+            spdlog::info("B_PTR{} {}", buffer_ptr, material->src);
+
+            memcpy(&material->material_id, &byte_array[buffer_ptr], sizeof(int32_t));
+            buffer_ptr += sizeof(int32_t);
+            spdlog::info("B_PTR{} {}", buffer_ptr, material->material_id);
+
+            memcpy(&material->texture_ids_size, &byte_array[buffer_ptr], sizeof(int));
+            buffer_ptr += sizeof(int);
+            spdlog::info("B_PTR{} {}", buffer_ptr, material->texture_ids_size);
+
+            if (material->texture_ids_size > 0) {
+                memcpy(&material->texture_id, &byte_array[buffer_ptr], sizeof(int32_t));
+                buffer_ptr += sizeof(int32_t);
+                spdlog::info("B_PTR{} {}", buffer_ptr, material->texture_id);
+
+                memcpy(&material->texture_offset, &byte_array[buffer_ptr], sizeof(glm::vec2));
+                buffer_ptr += sizeof(glm::vec2);
+                spdlog::info("B_PTR{} {} {}", buffer_ptr, material->texture_offset.x, material->texture_offset.y);
+
+                memcpy(&material->texture_scale, &byte_array[buffer_ptr], sizeof(glm::vec2));
+                buffer_ptr += sizeof(glm::vec2);
+                spdlog::info("B_PTR{} {} {}", buffer_ptr, material->texture_scale.x, material->texture_scale.y);
+            }
+
+           /* spdlog::info("{} {} {}", material->name, material->material_id, material->texture_id);
+            spdlog::info("buffer {} array_size {}", buffer_ptr, array_size);*/
+
+            vpet.material_list.push_back(material);
+        }
+
+        if (buffer_ptr != array_size) {
+            spdlog::info("DIFFERENT!! buffer {} array_size {}", buffer_ptr, array_size);
+        }
+
+
+        assert(buffer_ptr == array_size);
+    }
+
+    void set_scene_nodes(int8_t* byte_array, uint32_t array_size)
+    {
+        uint32_t buffer_ptr = 0;
+
+        while (buffer_ptr < array_size) {
+
+            sVPETNode* node = new sVPETNode();
+
+            memcpy(&node->node_type, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&light_node->intensity, &byte_array[buffer_ptr], sizeof(uint32_t));
+            memcpy(&node->editable, &byte_array[buffer_ptr], sizeof(uint32_t));
             buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&light_node->angle, &byte_array[buffer_ptr], sizeof(float));
-            buffer_ptr += sizeof(float);
+            memcpy(&node->child_count, &byte_array[buffer_ptr], sizeof(uint32_t));
+            buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&light_node->range, &byte_array[buffer_ptr], sizeof(float));
-            buffer_ptr += sizeof(float);
-
-            memcpy(&light_node->color, &byte_array[buffer_ptr], sizeof(glm::vec3));
+            // Transform to unity coordinate system
+            glm::vec3 transformed_pos = node->position;
+            transformed_pos.z = -transformed_pos.z;
+            memcpy(&transformed_pos, &byte_array[buffer_ptr], sizeof(glm::vec3));
             buffer_ptr += sizeof(glm::vec3);
 
-            break;
-        }
-        case eVPETNodeType::CAMERA: {
+            memcpy(&node->scale, &byte_array[buffer_ptr], sizeof(glm::vec3));
+            buffer_ptr += sizeof(glm::vec3);
 
-            sVPETCamNode* camera_node = static_cast<sVPETCamNode*>(node);
+            glm::quat transformed_rot = node->rotation;
+            transformed_rot.x = -transformed_rot.x;
+            transformed_rot.y = -transformed_rot.y;
+            memcpy(&transformed_rot, &byte_array[buffer_ptr], sizeof(glm::quat));
+            buffer_ptr += sizeof(glm::quat);
 
-            memcpy(&camera_node->fov, &byte_array[buffer_ptr], sizeof(float));
-            buffer_ptr += sizeof(float);
+            memcpy(&node->name, &byte_array[buffer_ptr], 64);
+            buffer_ptr += 64;
 
-            memcpy(&camera_node->aspect, &byte_array[buffer_ptr], sizeof(float));
-            buffer_ptr += sizeof(float);
+            switch (node->node_type)
+            {
+            case eVPETNodeType::GEO: {
 
-            memcpy(&camera_node->near, &byte_array[buffer_ptr], sizeof(float));
-            buffer_ptr += sizeof(float);
+                sVPETGeoNode* geo_node = static_cast<sVPETGeoNode*>(node);
 
-            memcpy(&camera_node->far, &byte_array[buffer_ptr], sizeof(float));
-            buffer_ptr += sizeof(float);
+                memcpy(&geo_node->geo_id, &byte_array[buffer_ptr], sizeof(uint32_t));
+                buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&camera_node->focal_dist, &byte_array[buffer_ptr], sizeof(float));
-            buffer_ptr += sizeof(float);
+                memcpy(&geo_node->material_id, &byte_array[buffer_ptr], sizeof(uint32_t));
+                buffer_ptr += sizeof(uint32_t);
 
-            memcpy(&camera_node->aperture, &byte_array[buffer_ptr], sizeof(float));
-            buffer_ptr += sizeof(float);
+                memcpy(&geo_node->color, &byte_array[buffer_ptr], sizeof(glm::vec4));
+                buffer_ptr += sizeof(glm::vec4);
 
-            break;
-        }
-        default:
-            if (node->node_type != eVPETNodeType::GROUP) {
-                assert(0);
+                break;
             }
-            break;
+            case eVPETNodeType::LIGHT: {
+
+                sVPETLightNode* light_node = static_cast<sVPETLightNode*>(node);
+
+                memcpy(&light_node->light_type, &byte_array[buffer_ptr], sizeof(uint32_t));
+                buffer_ptr += sizeof(uint32_t);
+
+                memcpy(&light_node->intensity, &byte_array[buffer_ptr], sizeof(uint32_t));
+                buffer_ptr += sizeof(uint32_t);
+
+                memcpy(&light_node->angle, &byte_array[buffer_ptr], sizeof(float));
+                buffer_ptr += sizeof(float);
+
+                memcpy(&light_node->range, &byte_array[buffer_ptr], sizeof(float));
+                buffer_ptr += sizeof(float);
+
+                memcpy(&light_node->color, &byte_array[buffer_ptr], sizeof(glm::vec3));
+                buffer_ptr += sizeof(glm::vec3);
+
+                break;
+            }
+            case eVPETNodeType::CAMERA: {
+
+                sVPETCamNode* camera_node = static_cast<sVPETCamNode*>(node);
+
+                memcpy(&camera_node->fov, &byte_array[buffer_ptr], sizeof(float));
+                buffer_ptr += sizeof(float);
+
+                memcpy(&camera_node->aspect, &byte_array[buffer_ptr], sizeof(float));
+                buffer_ptr += sizeof(float);
+
+                memcpy(&camera_node->near, &byte_array[buffer_ptr], sizeof(float));
+                buffer_ptr += sizeof(float);
+
+                memcpy(&camera_node->far, &byte_array[buffer_ptr], sizeof(float));
+                buffer_ptr += sizeof(float);
+
+                memcpy(&camera_node->focal_dist, &byte_array[buffer_ptr], sizeof(float));
+                buffer_ptr += sizeof(float);
+
+                memcpy(&camera_node->aperture, &byte_array[buffer_ptr], sizeof(float));
+                buffer_ptr += sizeof(float);
+
+                break;
+            }
+            default:
+                if (node->node_type != eVPETNodeType::GROUP) {
+                    assert(0);
+                }
+                break;
+            }
+
+            vpet.node_list.push_back(node);
+
+            if (node->editable) {
+                vpet.editables_node_list.push_back(node);
+            }
         }
+
+        spdlog::info("Nodes: buffer {} array_size {}", buffer_ptr, array_size);
+
+        assert(buffer_ptr == array_size);
     }
 
-    assert(buffer_ptr == array_size);
+#ifdef __EMSCRIPTEN__
 }
-
+#endif
 
 void SampleEngine::load_tracer_scene()
 {
@@ -644,7 +695,11 @@ void SampleEngine::load_tracer_scene()
 
     std::vector<sParentStack> parent_stack;
 
+    spdlog::info("VPET NODES: {}", vpet.node_list.size());
+
     for (sVPETNode* vpet_node : vpet.node_list) {
+
+        spdlog::info("Node {} of type {}:", vpet_node->name, static_cast<uint32_t>(vpet_node->node_type));
 
         Node3D* engine_node = nullptr;
 
@@ -654,7 +709,57 @@ void SampleEngine::load_tracer_scene()
             break;
         }
         case eVPETNodeType::GEO: {
+            sVPETGeoNode* vpet_geo = static_cast<sVPETGeoNode*>(vpet_node);
+            sVPETMesh* vpet_mesh = vpet.geo_list[vpet_geo->geo_id];
 
+            MeshInstance3D* mesh_instance = new MeshInstance3D();
+            Surface* surface = new Surface();
+
+            std::vector<sInterleavedData> interleaved;
+            interleaved.resize(vpet_mesh->vertex_array.size());
+
+            for (uint32_t i = 0u; i < interleaved.size(); ++i) {
+                interleaved[i].position = vpet_mesh->vertex_array[i];
+                interleaved[i].normal = vpet_mesh->normal_array[i];
+                interleaved[i].uv = vpet_mesh->uv_array[i];
+            }
+
+            surface->create_vertex_buffer(interleaved);
+
+            std::vector<uint32_t> indices;
+            indices.resize(vpet_mesh->index_array.size());
+            uint32_t add_idx = 0;
+            for (uint32_t idx = vpet_mesh->index_array.size(); idx > 0; --idx) {
+                indices[add_idx] = vpet_mesh->index_array[idx - 1];
+                add_idx++;
+            }
+
+            surface->create_index_buffer(indices);
+            mesh_instance->add_surface(surface);
+
+            // Material
+            {
+                sVPETMaterial* vpet_material = vpet.material_list[vpet_geo->material_id];
+
+                Material* geo_material = new Material();
+                geo_material->set_name(vpet_material->name);
+
+                // Texture
+                {
+                    sVPETTexture* vpet_texture = vpet.texture_list[vpet_material->texture_id];
+                    if (vpet_texture) {
+                        Texture* texture = new Texture();
+                        texture->set_name(vpet_texture->name);
+                        texture->load_from_data(vpet_texture->name, WGPUTextureDimension_2D, vpet_texture->width, vpet_texture->height, 1u, &vpet_texture->texture_data);
+                        geo_material->set_diffuse_texture(texture);
+                    }
+                }
+
+                geo_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, geo_material));
+                mesh_instance->set_surface_material_override(surface, geo_material);
+            }
+
+            engine_node = mesh_instance;
             break;
         }
         case eVPETNodeType::CAMERA: {
@@ -726,6 +831,8 @@ void SampleEngine::load_tracer_scene()
             parent_stack.push_back({ engine_node, 0, vpet_node->child_count });
         }
     }
+
+    spdlog::info("Tracer scene loaded!");
 }
 
 void SampleEngine::set_skybox_texture(const std::string& filename)
