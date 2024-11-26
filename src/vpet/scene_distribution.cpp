@@ -67,6 +67,10 @@ uint32_t process_material(sVPETContext& vpet, Surface* surface)
         vpet_material->texture_ids_size = 1;
         vpet.materials_byte_size += sizeof(uint32_t);
 
+        vpet_material->texture_ids.resize(vpet_material->texture_ids_size);
+        vpet_material->texture_offsets.resize(vpet_material->texture_ids_size);
+        vpet_material->texture_scales.resize(vpet_material->texture_ids_size);
+
         for (uint32_t i = 0; i < vpet_material->texture_ids_size; ++i) {
             vpet_material->texture_ids[i] = process_texture(vpet, material->get_diffuse_texture());
             vpet.materials_byte_size += sizeof(uint32_t);
@@ -319,14 +323,14 @@ uint32_t get_scene_request_buffer(void* distributor, const std::string& request,
             buffer_ptr += sizeof(uint32_t);
 
             if (material->texture_ids_size > 0) {
-                memcpy(&(*byte_array)[buffer_ptr], &material->texture_ids, sizeof(uint32_t));
-                buffer_ptr += sizeof(uint32_t);
+                memcpy(&(*byte_array)[buffer_ptr], material->texture_ids.data(), sizeof(uint32_t) * material->texture_ids_size);
+                buffer_ptr += sizeof(uint32_t) * material->texture_ids_size;
 
-                memcpy(&(*byte_array)[buffer_ptr], &material->texture_offsets, sizeof(glm::vec2));
-                buffer_ptr += sizeof(glm::vec2);
+                memcpy(&(*byte_array)[buffer_ptr], material->texture_offsets.data(), sizeof(glm::vec2) * material->texture_ids_size);
+                buffer_ptr += sizeof(glm::vec2) * material->texture_ids_size;
 
-                memcpy(&(*byte_array)[buffer_ptr], &material->texture_scales, sizeof(glm::vec2));
-                buffer_ptr += sizeof(glm::vec2);
+                memcpy(&(*byte_array)[buffer_ptr], material->texture_scales.data(), sizeof(glm::vec2) * material->texture_ids_size);
+                buffer_ptr += sizeof(glm::vec2) * material->texture_ids_size;
             }
         }
 
