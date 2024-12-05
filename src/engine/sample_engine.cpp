@@ -1095,3 +1095,66 @@ std::vector<std::string> SampleEngine::get_cameras_names()
 
     return names;
 }
+
+void SampleEngine::append_glb(const std::string& filename)
+{
+    std::vector<Node*> entities;
+    parse_scene(filename.c_str(), entities);
+
+    main_scene->add_nodes(entities);
+}
+
+Camera* SampleEngine::get_current_camera()
+{
+    return renderer->get_camera();
+}
+
+void SampleEngine::set_light_color(const std::string& light_name, float r, float g, float b)
+{
+    const auto& nodes = main_scene->get_nodes();
+
+    if (nodes.empty()) {
+        return;
+    }
+
+    std::function<void(Node*)> recurse_tree = [&](Node* node) {
+        Light3D* light = dynamic_cast<Light3D*>(node);
+        if (light && light->get_name() == light_name) {
+            light->set_color({ r, g, b });
+            return;
+        }
+
+        for (auto child : node->get_children()) {
+            recurse_tree(child);
+        }
+    };
+
+    for (Node* node : nodes) {
+        recurse_tree(node);
+    }
+}
+
+void SampleEngine::set_light_intensity(const std::string& light_name, float intensity)
+{
+    const auto& nodes = main_scene->get_nodes();
+
+    if (nodes.empty()) {
+        return;
+    }
+
+    std::function<void(Node*)> recurse_tree = [&](Node* node) {
+        Light3D* light = dynamic_cast<Light3D*>(node);
+        if (light && light->get_name() == light_name) {
+            light->set_intensity(intensity);
+            return;
+        }
+
+        for (auto child : node->get_children()) {
+            recurse_tree(child);
+        }
+    };
+
+    for (Node* node : nodes) {
+        recurse_tree(node);
+    }
+}

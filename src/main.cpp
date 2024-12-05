@@ -8,6 +8,7 @@
 #include <emscripten/html5.h>
 #include <emscripten/bind.h>
 
+
 #include "vpet/scene_distribution.h"
 
 // Binding code
@@ -15,10 +16,31 @@ EMSCRIPTEN_BINDINGS(_Class_) {
 
     emscripten::class_<sVPETContext>("sVPETContext");
 
+    // UHasselt gltf streaming demo
+    emscripten::class_<glm::vec3>("Vector3")
+        .constructor<>()
+        .constructor<float, float, float>()
+        .property("x", &glm::vec3::x)
+        .property("y", &glm::vec3::y)
+        .property("z", &glm::vec3::z);
+
+    emscripten::class_<Camera>("Camera")
+        .constructor<>()
+        .function("setSpeed", &Camera::set_speed)
+        .function("setPosition", &Camera::set_eye)
+        .function("setTarget", &Camera::set_center)
+        .function("getPosition", &Camera::get_eye)
+        .function("getTarget", &Camera::get_center)
+        .function("setPerspective", &Camera::set_perspective)
+        .function("setOrthographic", &Camera::set_orthographic)
+        .function("lookAt", &Camera::look_at);
+    // --------------------------------
+
     emscripten::class_<SampleEngine>("Engine")
         .constructor<>()
         .function("setEnvironment", &SampleEngine::set_skybox_texture)
         .function("loadGLB", &SampleEngine::load_glb)
+        .function("appendGLB", &SampleEngine::append_glb)
         .function("loadPly", &SampleEngine::load_ply)
         .function("setCameraType", &SampleEngine::set_camera_type)
         .class_function("getInstance", &SampleEngine::get_sample_instance, emscripten::return_value_policy::reference())
@@ -30,9 +52,14 @@ EMSCRIPTEN_BINDINGS(_Class_) {
         .function("setSceneTextures", &SampleEngine::set_scene_textures, emscripten::allow_raw_pointers())
         .function("setSceneMaterials", &SampleEngine::set_scene_materials, emscripten::allow_raw_pointers())
         .function("setSceneNodes", &SampleEngine::set_scene_nodes, emscripten::allow_raw_pointers())*/
-        .function("loadTracerScene", &SampleEngine::load_tracer_scene);
         //.function("getVPETContext", &SampleEngine::get_vpet_context);
+        .function("loadTracerScene", &SampleEngine::load_tracer_scene)
+        // UHasselt gltf streaming demo
+        .function("getCamera", &SampleEngine::get_current_camera, emscripten::return_value_policy::reference())
+        .function("setLightColor", &SampleEngine::set_light_color)
+        .function("setLightIntensity", &SampleEngine::set_light_intensity);
 
+    emscripten::register_vector<float>("vector<float>");
     emscripten::register_vector<std::string>("vector<string>");
 }
 

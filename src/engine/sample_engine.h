@@ -63,4 +63,10 @@ public:
     void reset_camera();
     void set_camera_speed(float value);
     std::vector<std::string> get_cameras_names();
+
+    // Methods to use in UHasselts gltf streaming demo
+    void append_glb(const std::string& filename);
+    Camera* get_current_camera();
+    void set_light_color(const std::string& light_name, float r, float g, float b);
+    void set_light_intensity(const std::string& light_name, float intensity);
 };
