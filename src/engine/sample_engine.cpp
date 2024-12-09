@@ -1099,9 +1099,15 @@ std::vector<std::string> SampleEngine::get_cameras_names()
 void SampleEngine::append_glb(const std::string& filename)
 {
     std::vector<Node*> entities;
-    parse_scene(filename.c_str(), entities);
 
-    main_scene->add_nodes(entities);
+    parse_scene(filename.c_str(), entities, true, scene_root);
+
+    if (!entities.empty()) {
+        assert(!scene_root);
+        assert(entities.size() == 1u);
+        scene_root = static_cast<Node3D*>(entities[0]);
+        main_scene->add_nodes(entities);
+    }
 }
 
 Camera* SampleEngine::get_current_camera()

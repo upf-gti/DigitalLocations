@@ -11,6 +11,7 @@
 
 class EntityCamera;
 class MeshInstance3D;
+class Node3D;
 
 class SampleEngine : public Engine {
 
@@ -25,6 +26,8 @@ class SampleEngine : public Engine {
     MeshInstance3D* skybox = nullptr;
     std::vector<EntityCamera*> cameras;
     bool rotate_scene = false;
+
+    Node3D* scene_root = nullptr;
 
     float camera_interp_speed = 1.0f;
 

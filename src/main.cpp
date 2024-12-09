@@ -38,12 +38,11 @@ EMSCRIPTEN_BINDINGS(_Class_) {
 
     emscripten::class_<SampleEngine>("Engine")
         .constructor<>()
+        .class_function("getInstance", &SampleEngine::get_sample_instance, emscripten::return_value_policy::reference())
         .function("setEnvironment", &SampleEngine::set_skybox_texture)
         .function("loadGLB", &SampleEngine::load_glb)
-        .function("appendGLB", &SampleEngine::append_glb)
         .function("loadPly", &SampleEngine::load_ply)
         .function("setCameraType", &SampleEngine::set_camera_type)
-        .class_function("getInstance", &SampleEngine::get_sample_instance, emscripten::return_value_policy::reference())
         .function("setCameraLookAtIndex", &SampleEngine::set_camera_lookat_index)
         .function("setCameraSpeed", &SampleEngine::set_camera_speed)
         .function("resetCamera", &SampleEngine::reset_camera)
@@ -55,6 +54,7 @@ EMSCRIPTEN_BINDINGS(_Class_) {
         //.function("getVPETContext", &SampleEngine::get_vpet_context);
         .function("loadTracerScene", &SampleEngine::load_tracer_scene)
         // UHasselt gltf streaming demo
+        .function("appendGLB", &SampleEngine::append_glb)
         .function("getCamera", &SampleEngine::get_current_camera, emscripten::return_value_policy::reference())
         .function("setLightColor", &SampleEngine::set_light_color)
         .function("setLightIntensity", &SampleEngine::set_light_intensity);
