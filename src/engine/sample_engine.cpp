@@ -8,6 +8,7 @@
 #include "framework/nodes/omni_light_3d.h"
 #include "framework/nodes/directional_light_3d.h"
 #include "framework/parsers/parse_scene.h"
+#include "framework/parsers/parse_gltf.h"
 #include "framework/camera/camera.h"
 #include "framework/camera/camera_3d.h"
 #include "framework/input.h"
@@ -33,6 +34,8 @@
 #include "shaders/mesh_forward.wgsl.gen.h"
 
 sVPETContext vpet;
+
+GltfParser gltf_parser;
 
 int SampleEngine::initialize(Renderer* renderer, sEngineConfiguration configuration)
 {
@@ -1100,7 +1103,9 @@ void SampleEngine::append_glb(const std::string& filename)
 {
     std::vector<Node*> entities;
 
-    parse_scene(filename.c_str(), entities, true, scene_root);
+    gltf_parser.push_scene_root(scene_root);
+
+    gltf_parser.parse(filename.c_str(), entities, PARSE_NO_FLAGS);
 
     if (!entities.empty()) {
         assert(!scene_root);
