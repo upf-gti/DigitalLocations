@@ -69,6 +69,7 @@ public:
 
     // Methods to use in UHasselts gltf streaming demo
     void append_glb(const std::string& filename);
+    void append_glb_data(int8_t* byte_array, uint32_t array_size);
     Camera* get_current_camera();
     void set_light_color(const std::string& light_name, float r, float g, float b);
     void set_light_intensity(const std::string& light_name, float intensity);

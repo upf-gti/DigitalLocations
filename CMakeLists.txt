@@ -115,7 +115,7 @@ if (EMSCRIPTEN)
 #        -sMAXIMUM_MEMORY=2GB
         -Wdeprecated-literal-operator
         -sSTACK_SIZE=5MB
-        -sEXPORTED_FUNCTIONS=_main,_malloc,_free,_set_scene_materials,_set_scene_nodes,_set_scene_textures,_set_scene_objects
+        -sEXPORTED_FUNCTIONS=_main,_malloc,_free,_set_scene_materials,_set_scene_nodes,_set_scene_textures,_set_scene_objects,_append_glb_data
         -sEXPORTED_RUNTIME_METHODS=ccall,cwrap
 #        -sASYNCIFY_STACK_SIZE=10000
         --bind
