@@ -833,18 +833,19 @@ void SampleEngine::load_tracer_scene()
             MeshInstance3D* mesh_instance = new MeshInstance3D();
             Surface* surface = new Surface();
 
-            std::vector<sInterleavedData> interleaved;
-            interleaved.resize(vpet_mesh->vertex_array.size());
+            sSurfaceData surface_data;
 
-            for (uint32_t i = 0u; i < interleaved.size(); ++i) {
-                interleaved[i].position = vpet_mesh->vertex_array[i];
-                interleaved[i].position.z = -interleaved[i].position.z;
-                interleaved[i].normal = vpet_mesh->normal_array[i];
-                interleaved[i].normal.z = -interleaved[i].normal.z;
-                interleaved[i].uv = vpet_mesh->uv_array[i];
+            surface_data.resize(vpet_mesh->vertex_array.size());
+
+            for (uint32_t i = 0u; i < surface_data.size(); ++i) {
+                surface_data.vertices[i] = vpet_mesh->vertex_array[i];
+                surface_data.vertices[i].z = -surface_data.vertices[i].z;
+                surface_data.normals[i]= vpet_mesh->normal_array[i];
+                surface_data.normals[i].z = -surface_data.normals[i].z;
+                surface_data.uvs[i] = vpet_mesh->uv_array[i];
             }
 
-            surface->create_vertex_buffer(interleaved);
+            surface->create_surface_data(surface_data);
 
             std::vector<uint32_t> indices;
             indices.resize(vpet_mesh->index_array.size());
@@ -875,7 +876,7 @@ void SampleEngine::load_tracer_scene()
                     }*/
                 }
 
-                geo_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, geo_material));
+                geo_material->set_shader(RendererStorage::get_shader_from_source(shaders::mesh_forward::source, shaders::mesh_forward::path, shaders::mesh_forward::libraries, geo_material));
                 mesh_instance->set_surface_material_override(surface, geo_material);
             }
 

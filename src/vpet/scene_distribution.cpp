@@ -94,14 +94,14 @@ uint32_t process_material(sVPETContext& vpet, Surface* surface)
 
 std::string generate_mesh_identifier(Surface* surface)
 {
-    sSurfaceData* surface_data = surface->get_surface_data();
-    return "Mesh_" + surface->get_name() + "_" + std::to_string(surface_data->vertices.size());;
+    sSurfaceData& surface_data = surface->get_surface_data();
+    return "Mesh_" + surface->get_name() + "_" + std::to_string(surface_data.vertices.size());
 }
 
 uint32_t process_geo(sVPETContext& vpet, Surface* surface)
 {
-    sSurfaceData* surface_data = surface->get_surface_data();
-    if (!surface_data) {
+    sSurfaceData& surface_data = surface->get_surface_data();
+    if (surface_data.size() == 0u) {
         assert(0);
         return -1;
     }
@@ -121,31 +121,31 @@ uint32_t process_geo(sVPETContext& vpet, Surface* surface)
     vpet_mesh->name = name;
 
     // Transform to unity coordinate system
-    vpet_mesh->vertex_array.resize(surface_data->vertices.size());
-    for (uint32_t idx = 0; idx < surface_data->vertices.size(); ++idx) {
-        vpet_mesh->vertex_array[idx] = surface_data->vertices[idx];
+    vpet_mesh->vertex_array.resize(surface_data.vertices.size());
+    for (uint32_t idx = 0; idx < surface_data.vertices.size(); ++idx) {
+        vpet_mesh->vertex_array[idx] = surface_data.vertices[idx];
         vpet_mesh->vertex_array[idx].z = -vpet_mesh->vertex_array[idx].z;
     }
 
     vpet.geos_byte_size += sizeof(uint32_t) + vpet_mesh->vertex_array.size() * sizeof(glm::vec3);
 
-    vpet_mesh->uv_array = surface_data->uvs;
+    vpet_mesh->uv_array = surface_data.uvs;
     vpet.geos_byte_size += sizeof(uint32_t) + vpet_mesh->uv_array.size() * sizeof(glm::vec2);
 
     // Transform to unity coordinate system
-    vpet_mesh->normal_array.resize(surface_data->normals.size());
-    for (uint32_t idx = 0; idx < surface_data->normals.size(); ++idx) {
-        vpet_mesh->normal_array[idx] = surface_data->normals[idx];
+    vpet_mesh->normal_array.resize(surface_data.normals.size());
+    for (uint32_t idx = 0; idx < surface_data.normals.size(); ++idx) {
+        vpet_mesh->normal_array[idx] = surface_data.normals[idx];
         vpet_mesh->normal_array[idx].z = -vpet_mesh->normal_array[idx].z;
     }
 
     vpet.geos_byte_size += sizeof(uint32_t) + vpet_mesh->normal_array.size() * sizeof(glm::vec3);
 
     // Transform triangle winding after vertex transform
-    vpet_mesh->index_array.resize(surface_data->indices.size());
+    vpet_mesh->index_array.resize(surface_data.indices.size());
     uint32_t add_idx = 0;
-    for (uint32_t idx = surface_data->indices.size(); idx > 0; --idx) {
-        vpet_mesh->index_array[add_idx] = surface_data->indices[idx - 1];
+    for (uint32_t idx = surface_data.indices.size(); idx > 0; --idx) {
+        vpet_mesh->index_array[add_idx] = surface_data.indices[idx - 1];
         add_idx++;
     }
 
