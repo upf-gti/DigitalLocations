@@ -249,18 +249,6 @@ window.App = {
 
             console.log(`Parameter ${ parameterID }, of type ${ this.parameterTypes[ parameterType ] } (${ parameterLength })`);
 
-            // Note: We don't have here the scene from VPET, so the node list
-            // and the object_id is unknown..
-
-            // assert(scene_object_id < vpet.node_list.size());
-            // sVPETNode* vpet_node = vpet.editables_node_list[scene_object_id];
-            // Node3D* node_ref = vpet_node->node_ref;
-
-            // if (!node_ref) {
-            //     return;
-            //     zmq_msg_close(&message);
-            // }
-
             let value = null;
 
             switch ( this.parameterTypes[ parameterType ] )
@@ -313,40 +301,8 @@ window.App = {
 
             console.log( `Value ${ value }` );
 
-            switch ( parameterID ) {
-            case 0: // POSITION: -z
-                value[2] = -value[2];
-                // node_ref->set_position(vector3);
-                break;
-            case 1: // ROTATION: -x and -y
-                value[0] = -value[0];
-                value[1] = -value[1];
-                // node_ref->set_rotation(rotation);
-                break;
-            case 2: // SCALE
-                // node_ref->set_scale(vector3);
-                break;
-            case 3: // LIGHT_COLOR
-                // if (vpet_node->node_type == eVPETNodeType::LIGHT) {
-                //     Light3D* light_ref = static_cast<Light3D*>(node_ref);
-                //     light_ref->set_color(vector4);
-                // }
-                break;
-            case 4: // LIGHT_INTENSITY
-                // if (vpet_node->node_type == eVPETNodeType::LIGHT) {
-                //     Light3D* light_ref = static_cast<Light3D*>(node_ref);
-                //     light_ref->set_intensity(f32);
-                // }
-                break;
-            case 5: // LIGHT_RANGE
-                // if (vpet_node->node_type == eVPETNodeType::LIGHT) {
-                //     Light3D* light_ref = static_cast<Light3D*>(node_ref);
-                //     light_ref->set_range(f32 * 2.0f);
-                // }
-                break;
-            default:
-                console.assert( 0 );
-            }
+            window.engineInstance.updateSceneParameter( sceneObjectID, parameterID,
+                value[ 0 ], value[ 1 ], value[ 2 ], value[ 3 ] );
         }
 
     },
@@ -542,6 +498,7 @@ window.App = {
     }
 };
 
+Module.Engine.onFrame = () => {};
 
 Promise.resolve( Module.Engine.getInstance() ).then( result => {
 

@@ -346,10 +346,10 @@ void SampleEngine::update(float delta_time)
 
 #endif
 
-    std::vector<Node*>& scene_nodes = main_scene->get_nodes();
+    const std::vector<Node*>& scene_nodes = main_scene->get_nodes();
 
     if (rotate_scene) {
-        for (auto node : main_scene->get_nodes()) {
+        for (auto node : scene_nodes) {
             MeshInstance3D* mesh_node = dynamic_cast<MeshInstance3D*>(node);
             if (mesh_node) {
                 mesh_node->rotate(delta_time, normals::pY);
@@ -812,6 +812,55 @@ void set_scene_nodes(int8_t* byte_array, uint32_t array_size)
 #ifdef __EMSCRIPTEN__
 }
 #endif
+
+void SampleEngine::update_scene_parameter(uint32_t scene_object_id, uint16_t parameter_id, float vx, float vy, float vz, float vw)
+{
+    assert(scene_object_id < vpet.node_list.size());
+
+    sVPETNode* vpet_node = vpet.editables_node_list[scene_object_id];
+    Node3D* node_ref = vpet_node->node_ref;
+
+    if (!node_ref) {
+        return;
+    }
+
+    switch (parameter_id) {
+    case 0:
+        vz = -vz;
+        node_ref->set_position(glm::vec3(vx, vy, vz));
+        break;
+    case 1:
+        vx = -vx;
+        vy = -vy;
+        node_ref->set_rotation(glm::quat(vx, vy, vz, vw));
+        break;
+    case 2:
+        node_ref->set_scale(glm::vec3(vx, vy, vz));
+        break;
+    case 3:
+        if (vpet_node->node_type == eVPETNodeType::LIGHT) {
+            Light3D* light_ref = static_cast<Light3D*>(node_ref);
+            light_ref->set_color(glm::vec4(vx, vy, vz, vw));
+        }
+        break;
+    case 4:
+        if (vpet_node->node_type == eVPETNodeType::LIGHT) {
+            Light3D* light_ref = static_cast<Light3D*>(node_ref);
+            light_ref->set_intensity(vx);
+        }
+        break;
+    case 5:
+        if (vpet_node->node_type == eVPETNodeType::LIGHT) {
+            Light3D* light_ref = static_cast<Light3D*>(node_ref);
+            light_ref->set_range(vx * 2.0f);
+        }
+        break;
+    default:
+        assert(0);
+    }
+
+    spdlog::info("Node {} updated succesfully!", scene_object_id);
+}
 
 void SampleEngine::load_tracer_scene()
 {

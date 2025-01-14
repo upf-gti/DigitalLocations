@@ -54,6 +54,7 @@ public:
     void update(float delta_time) override;
     void render() override;
 
+    void update_scene_parameter(uint32_t scene_object_id, uint16_t parameter_id, float vx, float vy, float vz, float vw);
     void load_tracer_scene();
 
     // Methods to use in web demonstrator

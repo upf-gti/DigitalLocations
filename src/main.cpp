@@ -53,6 +53,7 @@ EMSCRIPTEN_BINDINGS(_Class_) {
         .function("setSceneNodes", &SampleEngine::set_scene_nodes, emscripten::allow_raw_pointers())*/
         //.function("getVPETContext", &SampleEngine::get_vpet_context);
         .function("loadTracerScene", &SampleEngine::load_tracer_scene)
+        .function("updateSceneParameter", &SampleEngine::update_scene_parameter)
         // UHasselt gltf streaming demo
         .function("appendGLB", &SampleEngine::append_glb)
         .function("getCamera", &SampleEngine::get_current_camera, emscripten::return_value_policy::reference())
