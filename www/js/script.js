@@ -498,8 +498,6 @@ window.App = {
     }
 };
 
-Module.Engine.onFrame = () => {};
-
 Promise.resolve( Module.Engine.getInstance() ).then( result => {
 
     if ( !result ) {
