@@ -13,6 +13,34 @@ window.App = {
 
     dragSupportedExtensions: [ /*'hdr'*/, 'glb', 'ply' ],
 
+    messageTypes: {
+        0: "PARAMETER_UPDATE",
+        1: "LOCK",
+        2: "SYNC",
+        3: "PING",
+        4: "RESEND_UPDATE",
+        5: "UNDO_REDO_ADD",
+        6: "RESET_OBJECT",
+        7: "RPC",
+        255: "EMPTY"
+    },
+
+    parameterTypes: {
+        0: "NONE",
+        1: "ACTION",
+        2: "BOOL",
+        3: "INT",
+        4: "FLOAT",
+        5: "VECTOR2",
+        6: "VECTOR3",
+        7: "VECTOR4",
+        8: "QUATERNION",
+        9: "COLOR",
+        10: "STRING",
+        11: "LIST",
+        100: "UNKNOWN"
+    },
+
     init() {
 
         this.cameraTypes = [ "Orbit", "Flyover" ];
@@ -83,22 +111,21 @@ window.App = {
         // }
 
         // For scene updates
-        // {
-        //     const subscriber = new zmq.socket("sub");
+        {
+            const subscriber = new zmq.socket("sub");
 
-        //     subscriber.subscribe("");
+            subscriber.subscribe("");
 
-        //     subscriber.options.onconnect = () => {
-        //         console.log("Connected!");
-        //     };
+            subscriber.options.onconnect = () => {
+                console.log("Connected!");
+            };
 
-        //     subscriber.on('message', function( msg ) {
-        //         let string = new TextDecoder().decode( msg );
-        //         console.log( string );
-        //     });
+            subscriber.on('message', ( msg ) => {
+                this.onReceiveMessage( msg );
+            });
 
-        //     subscriber.connect("ws://127.0.0.1:5502");
-        // }
+            subscriber.connect("ws://127.0.0.1:5506");
+        }
 
     },
 
@@ -184,6 +211,144 @@ window.App = {
         {
             this.toggleUI();
         }
+    },
+
+    onReceiveMessage( msg ) {
+
+        // let string = new TextDecoder().decode( msg );
+        const buffer = msg;
+
+        var offset = 0;
+        const clientID = buffer.readUInt8( offset ); offset += 1;
+        const time = buffer.readUInt8( offset ); offset += 1;
+        const messageType = buffer.readUInt8( offset ); offset += 1;
+
+        if(this.messageTypes[ messageType ] == "PARAMETER_UPDATE")
+        {
+            console.log( buffer );
+            console.log("Client ID: " + clientID);
+            console.log("Time: " + time);
+            console.log("Message Type: " + this.messageTypes[ messageType ]);
+
+            this.readSceneParameter( buffer, offset );
+        }
+    },
+
+    readSceneParameter( buffer, offset ) {
+
+        while ( offset < buffer.length ) {
+
+            const sceneID = buffer.readUInt8( offset ); offset += 1;
+            const sceneObjectID = buffer.readUInt16LE( offset ) - 1; offset += 2;
+
+            console.log(`Scene ${ sceneID }, object ${ sceneObjectID }`);
+
+            const parameterID = buffer.readUInt16LE( offset ); offset += 2;
+            const parameterType = buffer.readUInt8( offset ); offset += 1;
+            const parameterLength = buffer.readUInt32LE( offset ); offset += 4;
+
+            console.log(`Parameter ${ parameterID }, of type ${ this.parameterTypes[ parameterType ] } (${ parameterLength })`);
+
+            // Note: We don't have here the scene from VPET, so the node list
+            // and the object_id is unknown..
+
+            // assert(scene_object_id < vpet.node_list.size());
+            // sVPETNode* vpet_node = vpet.editables_node_list[scene_object_id];
+            // Node3D* node_ref = vpet_node->node_ref;
+
+            // if (!node_ref) {
+            //     return;
+            //     zmq_msg_close(&message);
+            // }
+
+            let value = null;
+
+            switch ( this.parameterTypes[ parameterType ] )
+            {
+            case "FLOAT": {
+                value = buffer.readFloatLE( offset ); offset += 4;
+                break;
+            }
+            case "VECTOR2": {
+                value = [
+                    buffer.readFloatLE( offset ),
+                    buffer.readFloatLE( offset + 4 )
+                ]
+                offset += 8;
+                break;
+            }
+            case "VECTOR3": {
+                value = [
+                    buffer.readFloatLE( offset ),
+                    buffer.readFloatLE( offset + 4 ),
+                    buffer.readFloatLE( offset + 8 )
+                ]
+                offset += 12;
+                break;
+            }
+            case "COLOR": {
+                value = [
+                    buffer.readFloatLE( offset ),
+                    buffer.readFloatLE( offset + 4 ),
+                    buffer.readFloatLE( offset + 8 ),
+                    buffer.readFloatLE( offset + 12 )
+                ]
+                offset += 16;
+                break;
+            }
+            case "QUATERNION": {
+                value = [
+                    buffer.readFloatLE( offset ),
+                    buffer.readFloatLE( offset + 4 ),
+                    buffer.readFloatLE( offset + 8 ),
+                    buffer.readFloatLE( offset + 12 )
+                ]
+                offset += 16;
+                break;
+            }
+            default:
+                console.assert( 0 );
+                break;
+            }
+
+            console.log( `Value ${ value }` );
+
+            switch ( parameterID ) {
+            case 0: // POSITION: -z
+                value[2] = -value[2];
+                // node_ref->set_position(vector3);
+                break;
+            case 1: // ROTATION: -x and -y
+                value[0] = -value[0];
+                value[1] = -value[1];
+                // node_ref->set_rotation(rotation);
+                break;
+            case 2: // SCALE
+                // node_ref->set_scale(vector3);
+                break;
+            case 3: // LIGHT_COLOR
+                // if (vpet_node->node_type == eVPETNodeType::LIGHT) {
+                //     Light3D* light_ref = static_cast<Light3D*>(node_ref);
+                //     light_ref->set_color(vector4);
+                // }
+                break;
+            case 4: // LIGHT_INTENSITY
+                // if (vpet_node->node_type == eVPETNodeType::LIGHT) {
+                //     Light3D* light_ref = static_cast<Light3D*>(node_ref);
+                //     light_ref->set_intensity(f32);
+                // }
+                break;
+            case 5: // LIGHT_RANGE
+                // if (vpet_node->node_type == eVPETNodeType::LIGHT) {
+                //     Light3D* light_ref = static_cast<Light3D*>(node_ref);
+                //     light_ref->set_range(f32 * 2.0f);
+                // }
+                break;
+            default:
+                console.assert( 0 );
+            }
+        }
+
     },
 
     toggleModal( force ) {
