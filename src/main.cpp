@@ -47,18 +47,20 @@ EMSCRIPTEN_BINDINGS(_Class_) {
         .function("setCameraSpeed", &SampleEngine::set_camera_speed)
         .function("resetCamera", &SampleEngine::reset_camera)
         .function("toggleSceneRotation", &SampleEngine::toggle_rotation)
-      /*  .function("setSceneMeshes", &SampleEngine::set_scene_meshes, emscripten::allow_raw_pointers())
-        .function("setSceneTextures", &SampleEngine::set_scene_textures, emscripten::allow_raw_pointers())
-        .function("setSceneMaterials", &SampleEngine::set_scene_materials, emscripten::allow_raw_pointers())
-        .function("setSceneNodes", &SampleEngine::set_scene_nodes, emscripten::allow_raw_pointers())*/
-        //.function("getVPETContext", &SampleEngine::get_vpet_context);
+        /*  .function("setSceneMeshes", &SampleEngine::set_scene_meshes, emscripten::allow_raw_pointers())
+          .function("setSceneTextures", &SampleEngine::set_scene_textures, emscripten::allow_raw_pointers())
+          .function("setSceneMaterials", &SampleEngine::set_scene_materials, emscripten::allow_raw_pointers())
+          .function("setSceneNodes", &SampleEngine::set_scene_nodes, emscripten::allow_raw_pointers())*/
+          //.function("getVPETContext", &SampleEngine::get_vpet_context);
         .function("loadTracerScene", &SampleEngine::load_tracer_scene)
         .function("updateSceneParameter", &SampleEngine::update_scene_parameter)
         // UHasselt gltf streaming demo
         .function("appendGLB", &SampleEngine::append_glb)
         .function("getCamera", &SampleEngine::get_current_camera, emscripten::return_value_policy::reference())
         .function("setLightColor", &SampleEngine::set_light_color)
-        .function("setLightIntensity", &SampleEngine::set_light_intensity);
+        .function("setLightIntensity", &SampleEngine::set_light_intensity)
+        .function("getCamerasNames", &SampleEngine::get_cameras_names)
+        .function("setWasmModuleInitialized", &SampleEngine::set_wasm_module_initialized);
 
     emscripten::register_vector<float>("vector<float>");
     emscripten::register_vector<std::string>("vector<string>");

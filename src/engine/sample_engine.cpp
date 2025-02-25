@@ -37,24 +37,26 @@ sVPETContext vpet;
 
 GltfParser gltf_parser;
 
+#ifdef __EMSCRIPTEN__
+
+EM_JS(void, gltf_loaded, (), {
+    on_gltf_loaded();
+});
+
+#endif
+
 int SampleEngine::initialize(Renderer* renderer, sEngineConfiguration configuration)
 {
-    int error = Engine::initialize(renderer, configuration);
-
-    if (error) return error;
-
-    main_scene = new Scene("main_scene");
-
-	return error;
+	return Engine::initialize(renderer, configuration);
 }
 
 int SampleEngine::post_initialize()
 {
+    main_scene = new Scene("main_scene");
+
     // Create skybox
     {
         skybox = new Environment3D();
-        MeshInstance3D* skybox = new Environment3D();
-        main_scene->add_node(skybox);
     }
 
     // Create grid
@@ -77,8 +79,6 @@ int SampleEngine::post_initialize()
 
     //    main_scene->add_node(grid);
     //}
-
-    //load_glb("data/ContainerCity.glb");
 
 #ifndef __EMSCRIPTEN__
     // VPET connection
@@ -1025,50 +1025,52 @@ void SampleEngine::set_skybox_texture(const std::string& filename)
     skybox->get_surface(0)->get_material()->set_diffuse_texture(new_skybox);
 }
 
-std::vector<std::string> SampleEngine::load_glb(const std::string& filename)
+void SampleEngine::load_glb(const std::string& filename)
 {
-    main_scene->delete_all();
+    Parser::parse_async<GltfParser>(filename, [&](std::vector<Node*> entities, bool load_succeded) {
 
-    std::vector<Node*> entities;
-    parse_scene(filename.c_str(), entities, true);
+        main_scene->delete_all();
 
-    main_scene->add_nodes(entities);
+        main_scene->add_nodes(entities);
 
-    cameras.clear();
+        cameras.clear();
 
-    vpet.clean();
+        vpet.clean();
 
-    std::function<void(Node*)> recurse_tree = [&](Node* node) {
-        EntityCamera* new_camera = dynamic_cast<EntityCamera*>(node);
-        if (new_camera) {
-            cameras.push_back(new_camera);
+        if (main_scene->get_nodes().empty()) {
+            return;
         }
 
-        process_scene_object(vpet, node);
-
-        if (!node->get_children().empty()) {
-            for (auto child : node->get_children()) {
-                recurse_tree(child);
+        std::function<void(Node*)> recurse_tree = [&](Node* node) {
+            EntityCamera* new_camera = dynamic_cast<EntityCamera*>(node);
+            if (new_camera) {
+                cameras.push_back(new_camera);
             }
+
+            process_scene_object(vpet, node);
+
+            if (!node->get_children().empty()) {
+                for (auto child : node->get_children()) {
+                    recurse_tree(child);
+                }
+            }
+        };
+
+        // Each time we load entities, get vpet nodes and the cameras
+        for (auto node : main_scene->get_nodes()) {
+            recurse_tree(node);
         }
-    };
 
-    if (main_scene->get_nodes().empty()) {
-        return {};
-    }
+        reset_camera();
 
-    // Each time we load entities, get vpet nodes and the cameras
-    for (auto node : main_scene->get_nodes()) {
-        recurse_tree(node);
-    }
+        if (!cameras.empty()) {
+            set_camera_lookat_index(0);
+        }
 
-    reset_camera();
-
-    if (!cameras.empty()) {
-        set_camera_lookat_index(0);
-    }
-
-    return get_cameras_names();
+#ifdef __EMSCRIPTEN__
+        gltf_loaded();
+#endif
+    });
 }
 
 void SampleEngine::load_ply(const std::string& filename)

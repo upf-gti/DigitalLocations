@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Digital Locations</title>
-    <link rel="stylesheet" href="https://cdn.skypack.dev/lexgui/build/lexgui.css">
+    <link rel="stylesheet" crossorigin="anonymous" href="https://cdn.skypack.dev/lexgui/build/lexgui.css">
     <script type="importmap">
     {
         "imports": {
@@ -44,13 +44,57 @@
             totalDependencies: 0
         };
 
-        function loadApp()
+        async function onEnginePreInitialized() {
+
+            await Promise.resolve( Module.Engine.getInstance() ).then( result => {
+
+                if ( !result ) {
+                    console.error( "Module Instance is null" );
+                }
+
+                window.engineInstance = result;
+
+            } ).catch( error => {
+                console.log( error );
+            });
+
+            Promise.resolve( window.engineInstance.setWasmModuleInitialized(true) ).then( 
+
+            ).catch( error => {
+                console.log( error );
+            });
+
+        }
+
+        function onEngineInitialized()
         {
-            var script = document.createElement( 'script' );
-            script.type = 'module';
-            script.src = "./js/script.js";
-            script.async = false;
-            document.getElementsByTagName( 'head' )[ 0 ].appendChild( script );
+            window.App.init()
+        }
+
+        function _processVector( vector )
+        {
+            var array = [];
+            for( var i = 0; i < vector.size(); ++i )
+                array.push( vector.get(i) );
+
+            return array;
+        }
+
+        async function on_gltf_loaded()
+        {
+            var cameraNamesVector = await Promise.resolve( window.engineInstance.getCamerasNames())
+
+            // Update Camera look at points
+
+            window.App.cameraNames = _processVector( cameraNamesVector );
+
+            window.App.panel.get( "Look at" ).updateValues( window.App.cameraNames );
+
+            if( window.App.cameraNames.length )
+            {
+                // window.App.lookAtCameraIndexFromName( window.App.cameraNames[ 0 ] );
+                window.App.panel.get( "Look at" ).set(window.App.cameraNames[ 0 ])
+            }
         }
 
         (async () => {
@@ -77,6 +121,7 @@
         })();
     </script>
     <script src=./js/zmq_bundle.js></script>
+    <script type="module" src=./js/script.js></script>
 </body>
 
 </html>

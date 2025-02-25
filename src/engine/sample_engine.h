@@ -59,7 +59,7 @@ public:
 
     // Methods to use in web demonstrator
     void set_skybox_texture(const std::string& filename);
-    std::vector<std::string> load_glb(const std::string& filename);
+    void load_glb(const std::string& filename);
     void load_ply(const std::string& filename);
     void toggle_rotation();
     void set_camera_type(int camera_type);
@@ -74,4 +74,10 @@ public:
     Camera* get_current_camera();
     void set_light_color(const std::string& light_name, float r, float g, float b);
     void set_light_intensity(const std::string& light_name, float intensity);
+
+#ifdef __EMSCRIPTEN__
+    void set_wasm_module_initialized(bool value) {
+        wasm_module_initialized = value;
+    }
+#endif
 };

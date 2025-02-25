@@ -76,7 +76,7 @@ if (EMSCRIPTEN)
     )
 
     add_library(webgpu_layer
-        "${CMAKE_BINARY_DIR}/_deps/emdawn-src/include/webgpu.cpp"
+        "${CMAKE_BINARY_DIR}/_deps/emdawn-src/webgpu.cpp"
     )
     target_link_libraries(${PROJECT_NAME}
         webgpu_layer
@@ -85,12 +85,11 @@ if (EMSCRIPTEN)
     add_compile_options(
         #"-fno-exceptions"
         "$<$<CONFIG:Release>:-flto>"
+        -s USE_PTHREADS=1
     )
 
-    add_link_options(
-        #"-fno-exceptions"
-        "$<$<CONFIG:Release>:-flto>"
-    )
+    target_compile_options(webgpu_layer PRIVATE -s USE_PTHREADS=1)
+    target_compile_options(${PROJECT_NAME} PRIVATE -s USE_PTHREADS=1 "$<$<CONFIG:Release>:-flto>")
 
     target_link_options(${PROJECT_NAME} PRIVATE
 
@@ -103,14 +102,16 @@ if (EMSCRIPTEN)
         "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_webgpu_generated_struct_info.js"
         "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_webgpu_generated_sig_info.js"
         "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_webgpu.js"
-        "--js-library=${CMAKE_BINARY_DIR}/_deps/emdawn-src/library_html5_webgpu.js"
         "--closure-args=--externs=${CMAKE_BINARY_DIR}/_deps/emdawn-src/webgpu-externs.js"
 
+#        -sNO_DISABLE_EXCEPTION_CATCHING
         -sUSE_GLFW=3
         -sALLOW_MEMORY_GROWTH
-#        -sASYNCIFY
+        -sASYNCIFY
 #        -sWASM=0
 #        -sASSERTIONS
+        -sUSE_PTHREADS
+        -sPTHREAD_POOL_SIZE=4
 #        -fsanitize=address
 #        -sMAXIMUM_MEMORY=2GB
         -Wdeprecated-literal-operator
@@ -119,8 +120,8 @@ if (EMSCRIPTEN)
         -sEXPORTED_RUNTIME_METHODS=ccall,cwrap
 #        -sASYNCIFY_STACK_SIZE=10000
         --bind
-        -O3
-#        -sWASM_BIGINT
+#        -O3
+        -sWASM_BIGINT
         # only for dev
 #        -sERROR_ON_WASM_CHANGES_AFTER_LINK
 #        -O0

@@ -1,14 +1,5 @@
 import { LX } from 'lexgui';
 
-function _processVector( vector )
-{
-    var array = [];
-    for( var i = 0; i < vector.size(); ++i )
-        array.push( vector.get(i) );
-
-    return array;
-}
-
 window.App = {
 
     dragSupportedExtensions: [ /*'hdr'*/, 'glb', 'ply' ],
@@ -58,12 +49,10 @@ window.App = {
 
         if( this.location )
         {
-            this.toggleModal( true );
-
             const ext = LX.getExtension( this.location );
             switch( ext ) {
                 case 'glb': this.loadLocation.call( this, this._loadGltf, this.location ); break;
-                case 'ply': this.loadLocation.call( this, this._loadPly, this.location ); break;
+                case 'ply': this.toggleModal( true ); this.loadLocation.call( this, this._loadPly, this.location ); break;
             }
         }
 
@@ -140,7 +129,6 @@ window.App = {
         canvas.addEventListener('dragleave', e => e.preventDefault() );
         canvas.addEventListener('drop', (e) => {
             e.preventDefault();
-            this.toggleModal( true );
             const file = e.dataTransfer.files[0];
             const ext = LX.getExtension( file.name );
             if( this.dragSupportedExtensions.indexOf( ext ) == -1 )
@@ -148,7 +136,7 @@ window.App = {
             switch( ext ) {
                 // case 'hdr': this.loadEnvironment( file ); break;
                 case 'glb': this.loadLocation( this._loadGltf, file ); break;
-                case 'ply': this.loadLocation( this._loadPly, file ); break;
+                case 'ply': this.toggleModal( true ); this.loadLocation( this._loadPly, file ); break;
             }
         });
 
@@ -448,25 +436,11 @@ window.App = {
 
         this._fileStore( name, buffer );
 
-        var cameraNamesVector = window.engineInstance.loadGLB( name );
-
-        this.toggleModal( false );
-
         // Update UI
 
         LX.emit( '@location_name', name.replace( '.glb', '' ) );
 
-        // Update Camera look at points
-
-        this.cameraNames = _processVector( cameraNamesVector );
-
-        this.panel.get( "Look at" ).updateValues( this.cameraNames );
-
-        if( this.cameraNames.length )
-        {
-            // this.lookAtCameraIndexFromName( this.cameraNames[ 0 ] );
-            this.panel.get( "Look at" ).set(this.cameraNames[ 0 ])
-        }
+        window.engineInstance.loadGLB( name );
     },
 
     _loadPly( name, buffer ) {
@@ -497,16 +471,3 @@ window.App = {
         FS.close( stream );
     }
 };
-
-Promise.resolve( Module.Engine.getInstance() ).then( result => {
-
-    if ( !result ) {
-        console.error( "Module Instance is null" );
-    }
-
-    window.engineInstance = result;
-    window.App.init();
-
-} ).catch( error => {
-    console.log( error );
-});
