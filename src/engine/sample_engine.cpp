@@ -39,8 +39,8 @@ GltfParser gltf_parser;
 
 #ifdef __EMSCRIPTEN__
 
-EM_JS(void, gltf_loaded, (), {
-    on_gltf_loaded();
+EM_JS(void, gltf_loaded, (int8_t* ptr), {
+    onglTFLoaded(ptr);
 });
 
 #endif
@@ -135,8 +135,6 @@ void SampleEngine::clean()
 }
 
 #ifndef __EMSCRIPTEN__
-
-
 void SampleEngine::process_vpet_msg()
 {
     // Check if any message is received
@@ -317,7 +315,6 @@ void SampleEngine::process_vpet_msg()
         zmq_msg_close(&message);
     }
 }
-
 #endif
 
 void SampleEngine::update(float delta_time)
@@ -343,7 +340,6 @@ void SampleEngine::update(float delta_time)
     //    std::string data = "Scene update!";
     //    zmq_send(publisher, data.data(), data.size(), 0);
     //}
-
 #endif
 
     const std::vector<Node*>& scene_nodes = main_scene->get_nodes();
@@ -1068,7 +1064,7 @@ void SampleEngine::load_glb(const std::string& filename)
         }
 
 #ifdef __EMSCRIPTEN__
-        gltf_loaded();
+        gltf_loaded(0);
 #endif
     });
 }
@@ -1179,19 +1175,21 @@ void SampleEngine::append_glb(const std::string& filename)
 
 void SampleEngine::append_glb_data(int8_t* byte_array, uint32_t array_size)
 {
-    std::vector<Node*> entities;
+    Parser::read_data_async<GltfParser>(byte_array, array_size, scene_root, [&, ptr = byte_array](std::vector<Node*> entities, bool load_succeded) {
 
-    gltf_parser.push_scene_root(scene_root);
+#ifdef __EMSCRIPTEN__
+        gltf_loaded(ptr);
+#endif
 
-    gltf_parser.read_data(byte_array, array_size, entities, PARSE_NO_FLAGS);
+        if (entities.empty()) {
+            return;
+        }
 
-    if (!entities.empty()) {
         assert(!scene_root);
         assert(entities.size() == 1u);
         scene_root = static_cast<Node3D*>(entities[0]);
         main_scene->add_nodes(entities);
-    }
-
+    });
 }
 
 Camera* SampleEngine::get_current_camera()
