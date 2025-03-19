@@ -106,7 +106,7 @@ if (EMSCRIPTEN)
 
 #        -sNO_DISABLE_EXCEPTION_CATCHING
         -sUSE_GLFW=3
-        -sALLOW_MEMORY_GROWTH
+#        -sALLOW_MEMORY_GROWTH
         -sASYNCIFY
 #        -sWASM=0
 #        -sASSERTIONS
@@ -114,6 +114,7 @@ if (EMSCRIPTEN)
         -sPTHREAD_POOL_SIZE=4
 #        -fsanitize=address
 #        -sMAXIMUM_MEMORY=2GB
+        -sINITIAL_MEMORY=2147483648
         -Wdeprecated-literal-operator
         -sSTACK_SIZE=5MB
         -sEXPORTED_FUNCTIONS=_main,_malloc,_free,_set_scene_materials,_set_scene_nodes,_set_scene_textures,_set_scene_objects,_append_glb_data
